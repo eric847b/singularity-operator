@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "singularity-operator"
+version = "0.1.4"
+authors = [
+  { name="Eric (Mufnluvn) + Grok xAI" },
+]
+description = "The ultimate self-improving AI system (Singularity Operator) with universal EverythingDB, Groq-powered sequence completion, transistor-inspired two-level caching, and autonomous SelfImprover."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "requests",
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.optional-dependencies]
+dev = []
+
+[project.urls]
+Homepage = "https://github.com/eric847b/singularity-operator"
+Repository = "https://github.com/eric847b/singularity-operator"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[project.scripts]
+# Future: singularity-operator = "singularity_operator.cli:main"
