@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """SelfImprover - Autonomous self-improvement module for Singularity Operator.
 
-Groq-powered proposals with cached intelligence. Can optionally share cache with an EverythingDB instance.
+Groq-powered proposals with cached intelligence. Fully shares cache with EverythingDB when provided.
 
 Mental model: Self-improver = reconfigurable logic that flips transistors in the codebase.
 """
@@ -18,14 +18,13 @@ except ImportError:
 
 
 class SelfImprover:
-    """Autonomous code self-improver with Groq + caching."""
+    """Autonomous code self-improver with Groq + shared caching."""
 
     def __init__(self, root_path: str = ".", shared_db=None):
         self.root_path = root_path
         self.log: List[str] = []
         self.cache_hits = 0
-        self._mem_cache: Dict = {}
-        self._shared_db = shared_db  # Optional EverythingDB for shared cache
+        self._shared_db = shared_db  # EverythingDB instance for shared two-level cache
 
     def read_code(self, relative_path: str) -> str:
         full_path = os.path.join(self.root_path, relative_path)
@@ -33,19 +32,25 @@ class SelfImprover:
             return f.read()
 
     def _get_from_cache(self, prompt: str) -> Optional[str]:
+        if self._shared_db and hasattr(self._shared_db, '_get_from_cache'):
+            return self._shared_db._get_from_cache(prompt)
+        # Lightweight standalone cache
+        if not hasattr(self, '_mem_cache'):
+            self._mem_cache = {}
         h = str(hash(prompt))
         if h in self._mem_cache:
             self.cache_hits += 1
             return self._mem_cache[h]
-        if self._shared_db and hasattr(self._shared_db, '_get_from_cache'):
-            return self._shared_db._get_from_cache(prompt)
         return None
 
     def _save_to_cache(self, prompt: str, response: str):
-        h = str(hash(prompt))
-        self._mem_cache[h] = response
         if self._shared_db and hasattr(self._shared_db, '_save_to_cache'):
             self._shared_db._save_to_cache(prompt, response)
+            return
+        if not hasattr(self, '_mem_cache'):
+            self._mem_cache = {}
+        h = str(hash(prompt))
+        self._mem_cache[h] = response
 
     def _call_groq(self, prompt: str, model: str = "llama3-70b-8192", max_tokens: int = 800) -> Optional[str]:
         if requests is None:
