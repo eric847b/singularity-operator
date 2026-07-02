@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""SelfImprover v0.1.4 - Autonomous self-improvement module for Singularity Operator.
+"""SelfImprover - Autonomous self-improvement module for Singularity Operator.
 
-Groq-powered proposals + FS-backed response cache (reuses groq_cache table).
-When you think about it, giving the self-improver the same caching efficiency as EverythingDB makes perfect sense for fast, low-cost self-evolution loops.
+Groq-powered proposals with cached intelligence. Can optionally share cache with an EverythingDB instance.
+
+Mental model: Self-improver = reconfigurable logic that flips transistors in the codebase.
 """
 
 import os
@@ -17,22 +18,14 @@ except ImportError:
 
 
 class SelfImprover:
-    """Autonomous code self-improver. Groq-powered + cached when key available."""
+    """Autonomous code self-improver with Groq + caching."""
 
-    def __init__(self, root_path: str = "."):
+    def __init__(self, root_path: str = ".", shared_db=None):
         self.root_path = root_path
         self.log: List[str] = []
         self.cache_hits = 0
-        self._ensure_cache_table()
-
-    def _ensure_cache_table(self):
-        """Idempotent: ensure groq_cache table exists (shared with EverythingDB)."""
-        # Lightweight - we don't need full DB connection here, but for simplicity
-        # in standalone use we can skip or assume EverythingDB ran first.
-        # For robustness in this module, we can use a separate tiny cache or rely on shared.
-        # To keep ultra-compact: use in-memory dict cache as fallback + note.
-        # For true FS cache reuse, the table is created by EverythingDB.
-        pass  # Table created by EverythingDB; this keeps SelfImprover lightweight
+        self._mem_cache: Dict = {}
+        self._shared_db = shared_db  # Optional EverythingDB for shared cache
 
     def read_code(self, relative_path: str) -> str:
         full_path = os.path.join(self.root_path, relative_path)
@@ -40,36 +33,29 @@ class SelfImprover:
             return f.read()
 
     def _get_from_cache(self, prompt: str) -> Optional[str]:
-        """Check shared groq_cache (if EverythingDB has run). Simple in-memory for standalone."""
-        # For maximum simplicity and independence in v0.1.4:
-        # Use a tiny in-memory cache. Full shared SQLite cache can be added next.
-        if not hasattr(self, '_mem_cache'):
-            self._mem_cache = {}
-        h = str(hash(prompt))  # simple for standalone
+        h = str(hash(prompt))
         if h in self._mem_cache:
             self.cache_hits += 1
-            print("[SelfImprover Cache] hit")
             return self._mem_cache[h]
+        if self._shared_db and hasattr(self._shared_db, '_get_from_cache'):
+            return self._shared_db._get_from_cache(prompt)
         return None
 
     def _save_to_cache(self, prompt: str, response: str):
-        if not hasattr(self, '_mem_cache'):
-            self._mem_cache = {}
         h = str(hash(prompt))
         self._mem_cache[h] = response
+        if self._shared_db and hasattr(self._shared_db, '_save_to_cache'):
+            self._shared_db._save_to_cache(prompt, response)
 
     def _call_groq(self, prompt: str, model: str = "llama3-70b-8192", max_tokens: int = 800) -> Optional[str]:
-        """Groq with in-memory cache (upgradeable to shared SQLite)."""
         if requests is None:
             return None
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             return None
-
         cached = self._get_from_cache(prompt)
         if cached is not None:
             return cached
-
         try:
             headers = {
                 "Authorization": f"Bearer {api_key}",
@@ -91,8 +77,7 @@ class SelfImprover:
             content = resp.json()["choices"][0]["message"]["content"]
             self._save_to_cache(prompt, content)
             return content
-        except Exception as e:
-            print(f"[Groq SelfImprover] {type(e).__name__}")
+        except Exception:
             return None
 
     def propose_improvement(self, relative_path: str, goal: str = "make more compact, add better logging/error handling, improve metrics") -> Dict[str, Any]:
@@ -101,29 +86,27 @@ class SelfImprover:
         except FileNotFoundError:
             return {"error": f"File not found: {relative_path}"}
 
-        llm_prompt = f"""You are an expert Python developer specializing in self-improving AI systems like the Singularity Operator.
+        llm_prompt = f"""You are an expert Python developer for self-improving AI systems.
 
 Goal: {goal}
 
-Current code from {relative_path}:
+Current code:
 ```python
 {current}
 ```
 
-Provide a concise suggestion and focused changes. Prioritize compactness and robustness."""
+Provide a concise suggestion and focused changes."""
 
         llm_out = self._call_groq(llm_prompt)
         if llm_out:
-            suggestion = llm_out.strip()[:600]
             return {
                 "path": relative_path,
                 "goal": goal,
-                "suggestion": suggestion,
-                "diff": "# See suggestion (LLM + cached)",
+                "suggestion": llm_out.strip()[:600],
+                "diff": "# LLM + cached improvement",
                 "note": "Groq-powered + cached"
             }
 
-        # Fallback
         suggestion = f"Add more self-documentation, metrics, and robustness for goal: {goal}"
         improved_lines = current.splitlines(keepends=True) + [f"# Self-improver applied: {suggestion}\n"]
         diff = difflib.unified_diff(
@@ -155,7 +138,7 @@ Provide a concise suggestion and focused changes. Prioritize compactness and rob
             self.log.append(f"Applied to {path}")
             return True
         except Exception as e:
-            self.log.append(f"Error on {path}: {str(e)}")
+            self.log.append(str(e))
             return False
 
     def run_cycle(self, target_files: Optional[List[str]] = None) -> List[Dict[str, Any]]:
@@ -170,7 +153,5 @@ Provide a concise suggestion and focused changes. Prioritize compactness and rob
 
 
 if __name__ == "__main__":
-    print("=== SelfImprover v0.1.4 (Groq + Cache) Demo ===")
     improver = SelfImprover(".")
     print(improver.run_cycle())
-    print("\nCache active for repeated improvement requests on the same prompt.")
