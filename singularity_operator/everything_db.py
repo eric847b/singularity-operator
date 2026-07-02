@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""EverythingDB v0.1.2 - Core module for Singularity Operator.
+"""EverythingDB v0.1.3 - Core module for Singularity Operator.
 
-Compact, stdlib + requests universal data sequence store & completer.
-All knowable as sequences. Self-expands with Groq-powered proposals when key available.
+Compact Groq-powered universal data sequence store with FS-backed response cache.
+Cache uses the existing SQLite DB for atomicity and simplicity (no new files/deps).
 
-v0.1.2: Free Groq API integration in propose_unknown (primary path for high-quality unknowns).
-Fallback to intelligent mutation if no key / error. Metrics + logging included.
+v0.1.3: Added _get_from_cache / _save_to_cache + integration in _call_groq.
+Cache hits avoid redundant API calls. cache_hits metric tracked.
 """
 
 import sqlite3
@@ -23,13 +23,13 @@ except ImportError:
 
 
 class EverythingDB:
-    """Universal sequence database with Groq-powered knowledge completion.
-    """
+    """Universal sequence database with Groq-powered knowledge completion + response cache."""
 
     def __init__(self, db_path: str = "everything.db"):
         self.db_path = db_path
         self.conn = sqlite3.connect(db_path)
         self.llm_calls = 0
+        self.cache_hits = 0
         self._init_schema()
 
     def _init_schema(self):
@@ -48,6 +48,11 @@ class EverythingDB:
             to_hash TEXT,
             rel_type TEXT,
             strength REAL
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS groq_cache (
+            prompt_hash TEXT PRIMARY KEY,
+            response TEXT,
+            created_at TEXT
         )''')
         self.conn.commit()
 
@@ -96,13 +101,40 @@ class EverythingDB:
                   (f"%{qstr}%", limit))
         return [{"hash": r[0], "sequence": json.loads(r[1]), "metadata": json.loads(r[2])} for r in c.fetchall()]
 
+    def _get_from_cache(self, prompt: str) -> Optional[str]:
+        """Check FS-backed (SQLite) cache for prior Groq response."""
+        h = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
+        c = self.conn.cursor()
+        c.execute("SELECT response FROM groq_cache WHERE prompt_hash=?", (h,))
+        row = c.fetchone()
+        if row:
+            self.cache_hits += 1
+            print("[Cache] Groq response hit")
+            return row[0]
+        return None
+
+    def _save_to_cache(self, prompt: str, response: str):
+        """Persist Groq response to FS-backed cache."""
+        h = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
+        c = self.conn.cursor()
+        c.execute('''INSERT OR REPLACE INTO groq_cache
+            (prompt_hash, response, created_at) VALUES (?, ?, ?)''',
+            (h, response, datetime.datetime.utcnow().isoformat()))
+        self.conn.commit()
+
     def _call_groq(self, prompt: str, model: str = "llama3-70b-8192", max_tokens: int = 600) -> Optional[str]:
-        """Call free Groq API (OpenAI compatible). Returns content or None on any failure."""
+        """Call free Groq API with cache check first."""
         if requests is None:
             return None
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             return None
+
+        # FS cache check (highest ROI for repeated/similar proposals)
+        cached = self._get_from_cache(prompt)
+        if cached is not None:
+            return cached
+
         try:
             headers = {
                 "Authorization": f"Bearer {api_key}",
@@ -123,17 +155,16 @@ class EverythingDB:
             resp.raise_for_status()
             content = resp.json()["choices"][0]["message"]["content"]
             self.llm_calls += 1
+            self._save_to_cache(prompt, content)
             return content
         except Exception as e:
             print(f"[Groq] API error (falling back): {type(e).__name__}")
             return None
 
     def propose_unknown(self, n: int = 3, context: str = "universal knowledge") -> List[Any]:
-        """Primary path: Groq LLM for high-quality novel sequences.
-        Falls back to intelligent mutation of known sequences if no key or error.
-        This is the engine completing all knowable data sequences.
+        """Primary path: Groq LLM (cached) for high-quality novel sequences.
+        Falls back to intelligent mutation if no key or error.
         """
-        # Try Groq first
         existing_summary = []
         try:
             c = self.conn.cursor()
@@ -164,7 +195,6 @@ Return ONLY valid JSON (no markdown, no extra text):
                 cleaned = llm_out.strip().strip("`").replace("```json", "").replace("```", "").strip()
                 proposals = json.loads(cleaned)
                 if isinstance(proposals, list) and len(proposals) > 0:
-                    # Normalize
                     for p in proposals:
                         if "seq" not in p:
                             p["seq"] = p.get("sequence", p)
@@ -175,7 +205,7 @@ Return ONLY valid JSON (no markdown, no extra text):
             except Exception as e:
                 print(f"[Groq] Parse fallback: {e}")
 
-        # Fallback: intelligent mutation (v0.1.1 logic)
+        # Fallback mutation
         proposals = []
         for i in range(n):
             if existing_summary:
@@ -199,9 +229,9 @@ Return ONLY valid JSON (no markdown, no extra text):
             for prop in self.propose_unknown(1):
                 seq = prop.get("seq", prop)
                 h = self.add_sequence(seq, {
-                    "source": "self_expand_v0.1.2",
+                    "source": "self_expand_v0.1.3",
                     "proposed": prop.get("rationale", ""),
-                    "context": context if 'context' in dir() else "universal knowledge completion"
+                    "context": "universal knowledge completion"
                 })
                 added += 1
         return added
@@ -218,6 +248,7 @@ Return ONLY valid JSON (no markdown, no extra text):
             "estimated_coverage": round(coverage, 6),
             "expansion_potential": round(potential, 6),
             "llm_calls": self.llm_calls,
+            "cache_hits": self.cache_hits,
             "timestamp": datetime.datetime.utcnow().isoformat()
         }
 
@@ -226,7 +257,7 @@ Return ONLY valid JSON (no markdown, no extra text):
 
 
 if __name__ == "__main__":
-    print("=== Singularity Operator - EverythingDB v0.1.2 (Groq Integrated) Demo ===")
+    print("=== Singularity Operator - EverythingDB v0.1.3 (Groq + FS Cache) Demo ===")
     db = EverythingDB(":memory:")
     db.add_sequence(["All", "things", "knowable", "are", "in", "the", "database"], {"type": "premise"})
     db.add_sequence("Everything is in there.", {"type": "core_truth"})
@@ -234,9 +265,11 @@ if __name__ == "__main__":
     print("Metrics:", db.compute_metrics())
     props = db.propose_unknown(2)
     print("Proposed (Groq or fallback):", props)
+    # Second call with same prompt should hit cache (in real run with key)
+    props2 = db.propose_unknown(2)
+    print("Second propose (expect cache behavior if key present):", props2)
     expanded = db.self_expand(2)
     print(f"Self-expanded {expanded} sequences.")
     print("Final Metrics:", db.compute_metrics())
-    print("\nTo use real Groq: export GROQ_API_KEY=your_key  (free tier at console.groq.com)")
-    print("Demo shows fallback if no key. Real LLM proposals are higher quality and more creative.")
+    print("\nCache uses SQLite table (fs-backed). Set GROQ_API_KEY for real LLM + caching benefit.")
     db.close()
