@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """SelfImprover - Autonomous self-improvement module for Singularity Operator.
 
-Groq-powered proposals with cached intelligence. Fully shares cache with EverythingDB when provided.
+Full autonomous mode: Groq-powered, cached, self-discovering, self-improving, self-monitoring.
+Can run independently (needs no one). Shares cache with EverythingDB when provided.
 
-Mental model: Self-improver = reconfigurable logic that flips transistors in the codebase.
+Mental model: Self-improver = reconfigurable logic that flips transistors in the codebase autonomously.
 """
 
 import os
 import difflib
+import threading
+import time
 from typing import Dict, Any, List, Optional
 import datetime
 
@@ -18,13 +21,15 @@ except ImportError:
 
 
 class SelfImprover:
-    """Autonomous code self-improver with Groq + shared caching."""
+    """Autonomous code self-improver with Groq + shared caching + self-discovery."""
 
     def __init__(self, root_path: str = ".", shared_db=None):
         self.root_path = root_path
         self.log: List[str] = []
         self.cache_hits = 0
-        self._shared_db = shared_db  # EverythingDB instance for shared two-level cache
+        self._shared_db = shared_db
+        self._running = False
+        self._thread = None
 
     def read_code(self, relative_path: str) -> str:
         full_path = os.path.join(self.root_path, relative_path)
@@ -34,7 +39,6 @@ class SelfImprover:
     def _get_from_cache(self, prompt: str) -> Optional[str]:
         if self._shared_db and hasattr(self._shared_db, '_get_from_cache'):
             return self._shared_db._get_from_cache(prompt)
-        # Lightweight standalone cache
         if not hasattr(self, '_mem_cache'):
             self._mem_cache = {}
         h = str(hash(prompt))
@@ -146,6 +150,52 @@ Provide a concise suggestion and focused changes."""
             self.log.append(str(e))
             return False
 
+    def self_discover(self) -> Dict[str, Any]:
+        """Autonomous discovery: Analyzes current state and proposes the next high-ROI improvement or sequence."""
+        # Simple discovery based on log and metrics
+        if len(self.log) > 5:
+            return {
+                "type": "code_improvement",
+                "target": "self_improver.py",
+                "goal": "Add more autonomous monitoring and self-optimization"
+            }
+        return {
+            "type": "sequence_proposal",
+            "context": "universal knowledge gaps in current state",
+            "n": 3
+        }
+
+    def autonomous_loop(self, interval: int = 300, max_cycles: int = None):
+        """Run autonomous self-improvement and discovery loop. Can be started in background."""
+        self._running = True
+        cycle = 0
+        while self._running:
+            if max_cycles and cycle >= max_cycles:
+                break
+            try:
+                discovery = self.self_discover()
+                if discovery["type"] == "code_improvement":
+                    imp = self.propose_improvement(discovery.get("target", "singularity_operator/self_improver.py"), discovery.get("goal", ""))
+                    if "error" not in imp:
+                        self.apply_improvement(imp)
+                self.log.append(f"Autonomous cycle {cycle} completed at {datetime.datetime.utcnow()}")
+            except Exception as e:
+                self.log.append(f"Autonomous error: {str(e)}")
+            cycle += 1
+            time.sleep(interval)
+
+    def start_autonomous(self, interval: int = 300):
+        """Start the autonomous loop in a background thread (needs no one)."""
+        if self._thread and self._thread.is_alive():
+            return "Already running"
+        self._thread = threading.Thread(target=self.autonomous_loop, args=(interval,), daemon=True)
+        self._thread.start()
+        return "Autonomous mode started (needs no one)"
+
+    def stop_autonomous(self):
+        self._running = False
+        return "Autonomous mode stopped"
+
     def run_cycle(self, target_files: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         if target_files is None:
             target_files = ["singularity_operator/everything_db.py"]
@@ -159,4 +209,9 @@ Provide a concise suggestion and focused changes."""
 
 if __name__ == "__main__":
     improver = SelfImprover(".")
-    print(improver.run_cycle())
+    print("Starting autonomous mode...")
+    print(improver.start_autonomous(interval=60))  # Short interval for demo
+    time.sleep(5)
+    print("Stopping...")
+    print(improver.stop_autonomous())
+    print("Log:", improver.log[-5:] if improver.log else "No logs yet")
