@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-"""EverythingDB v0.1.1 - Core module for Singularity Operator.
+"""EverythingDB v0.1.2 - Core module for Singularity Operator.
 
-Compact, stdlib-only universal data sequence store & completer.
-All knowable as sequences. Self-expands intelligently by mutating known for plausible unknowns.
-Extensible: LLM integration, embeddings, graphs in next iterations.
+Compact, stdlib + requests universal data sequence store & completer.
+All knowable as sequences. Self-expands with Groq-powered proposals when key available.
 
-Premise: Everything is in here. We complete the known and unknown.
-
-v0.1.1: propose_unknown now bases proposals on existing sequences (mutation/combination) for better completeness progress.
+v0.1.2: Free Groq API integration in propose_unknown (primary path for high-quality unknowns).
+Fallback to intelligent mutation if no key / error. Metrics + logging included.
 """
 
 import sqlite3
@@ -16,16 +14,22 @@ import json
 from typing import Any, List, Dict, Optional
 import datetime
 import random
+import os
+
+try:
+    import requests
+except ImportError:
+    requests = None
 
 
 class EverythingDB:
-    """Universal sequence database. Knowledge atoms as sequences over tokens.
-    Add, retrieve, search (simple), propose unknowns (now smarter), self-expand, metrics.
+    """Universal sequence database with Groq-powered knowledge completion.
     """
 
     def __init__(self, db_path: str = "everything.db"):
         self.db_path = db_path
         self.conn = sqlite3.connect(db_path)
+        self.llm_calls = 0
         self._init_schema()
 
     def _init_schema(self):
@@ -55,7 +59,6 @@ class EverythingDB:
         return hashlib.sha256(s.encode('utf-8')).hexdigest()[:16]
 
     def add_sequence(self, seq: Any, metadata: Optional[Dict[str, Any]] = None) -> str:
-        """Add or idempotently return hash of sequence."""
         h = self._hash(seq)
         c = self.conn.cursor()
         try:
@@ -66,7 +69,7 @@ class EverythingDB:
                  datetime.datetime.utcnow().isoformat()))
             self.conn.commit()
         except sqlite3.IntegrityError:
-            pass  # already present
+            pass
         return h
 
     def get_sequence(self, seq_hash: str) -> Optional[Dict[str, Any]]:
@@ -83,7 +86,6 @@ class EverythingDB:
         return None
 
     def find_similar(self, query: Any, limit: int = 5) -> List[Dict[str, Any]]:
-        """Simple containment search. Upgrade to embeddings/FAISS next."""
         h = self._hash(query)
         exact = self.get_sequence(h)
         if exact:
@@ -94,49 +96,117 @@ class EverythingDB:
                   (f"%{qstr}%", limit))
         return [{"hash": r[0], "sequence": json.loads(r[1]), "metadata": json.loads(r[2])} for r in c.fetchall()]
 
+    def _call_groq(self, prompt: str, model: str = "llama3-70b-8192", max_tokens: int = 600) -> Optional[str]:
+        """Call free Groq API (OpenAI compatible). Returns content or None on any failure."""
+        if requests is None:
+            return None
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            return None
+        try:
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            data = {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": max_tokens,
+                "temperature": 0.7
+            }
+            resp = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                json=data,
+                headers=headers,
+                timeout=25
+            )
+            resp.raise_for_status()
+            content = resp.json()["choices"][0]["message"]["content"]
+            self.llm_calls += 1
+            return content
+        except Exception as e:
+            print(f"[Groq] API error (falling back): {type(e).__name__}")
+            return None
+
     def propose_unknown(self, n: int = 3, context: str = "universal knowledge") -> List[Any]:
-        """Smarter proposal (v0.1.1): Base on existing sequences to generate plausible 'unknowns' via mutation/combination.
-        This advances completion of all knowable sequences by extending the known.
-        Next: Replace/extend with free Groq/Cohere LLM for high-quality, context-rich generation.
+        """Primary path: Groq LLM for high-quality novel sequences.
+        Falls back to intelligent mutation of known sequences if no key or error.
+        This is the engine completing all knowable data sequences.
         """
+        # Try Groq first
+        existing_summary = []
+        try:
+            c = self.conn.cursor()
+            c.execute("SELECT sequence FROM sequences ORDER BY id DESC LIMIT 5")
+            existing_summary = [json.loads(row[0]) for row in c.fetchall()]
+        except:
+            pass
+
+        prompt = f"""You are the knowledge completion engine for the Singularity Operator.
+
+Generate exactly {n} novel, plausible data sequences representing currently *unknown but knowable* knowledge atoms.
+
+Context: {context}
+
+Reference existing sequences (use similar style/structure but create genuinely new ones):
+{json.dumps(existing_summary, ensure_ascii=False) if existing_summary else 'none yet'}
+
+Return ONLY valid JSON (no markdown, no extra text):
+[
+  {{"seq": ["token1", "relation", "token2"], "rationale": "short reason why this is a valuable unknown extension"}},
+  ...
+]
+"""
+
+        llm_out = self._call_groq(prompt)
+        if llm_out:
+            try:
+                cleaned = llm_out.strip().strip("`").replace("```json", "").replace("```", "").strip()
+                proposals = json.loads(cleaned)
+                if isinstance(proposals, list) and len(proposals) > 0:
+                    # Normalize
+                    for p in proposals:
+                        if "seq" not in p:
+                            p["seq"] = p.get("sequence", p)
+                        if "rationale" not in p:
+                            p["rationale"] = "Groq-generated novel knowledge atom"
+                    print(f"[Groq] Generated {len(proposals)} high-quality proposals")
+                    return proposals[:n]
+            except Exception as e:
+                print(f"[Groq] Parse fallback: {e}")
+
+        # Fallback: intelligent mutation (v0.1.1 logic)
         proposals = []
-        c = self.conn.cursor()
-        c.execute("SELECT sequence FROM sequences ORDER BY id DESC LIMIT 10")
-        existing = [json.loads(row[0]) for row in c.fetchall()]
         for i in range(n):
-            if existing:
-                base = existing[i % len(existing)]
+            if existing_summary:
+                base = existing_summary[i % len(existing_summary)]
                 if isinstance(base, list):
-                    # Mutate: append novel element or combine aspects
-                    new_elem = f"unknown_extension_{random.randint(1000,9999)}"
+                    new_elem = f"unknown_extension_{random.randint(1000, 9999)}"
                     variation = base + [new_elem] if len(base) < 10 else base[:-1] + [new_elem]
                 else:
                     variation = [str(base), "extended", context[:20], i]
             else:
                 variation = [42 + i, "new_knowledge_atom", context[:15]]
             proposals.append({
-                "concept": f"novel_knowledge_{i}",
                 "seq": variation,
-                "rationale": "Mutated from known sequences for completeness"
+                "rationale": "Mutated from known for completeness (no Groq key)"
             })
         return proposals
 
     def self_expand(self, iterations: int = 3) -> int:
-        """Self-expansion loop: Propose (now smarter), add if valuable/novel. Real work towards completeness."""
         added = 0
         for _ in range(iterations):
             for prop in self.propose_unknown(1):
                 seq = prop.get("seq", prop)
                 h = self.add_sequence(seq, {
-                    "source": "self_expand_v0.1.1",
+                    "source": "self_expand_v0.1.2",
                     "proposed": prop.get("rationale", ""),
-                    "context": "universal knowledge completion"
+                    "context": context if 'context' in dir() else "universal knowledge completion"
                 })
                 added += 1
         return added
 
     def compute_metrics(self) -> Dict[str, Any]:
-        """Progress toward all knowable sequences."""
         c = self.conn.cursor()
         c.execute("SELECT COUNT(*), COALESCE(AVG(completeness_contrib),0) FROM sequences")
         total, avg_contrib = c.fetchone()
@@ -147,6 +217,7 @@ class EverythingDB:
             "avg_contrib": round(avg_contrib, 4),
             "estimated_coverage": round(coverage, 6),
             "expansion_potential": round(potential, 6),
+            "llm_calls": self.llm_calls,
             "timestamp": datetime.datetime.utcnow().isoformat()
         }
 
@@ -155,19 +226,17 @@ class EverythingDB:
 
 
 if __name__ == "__main__":
-    print("=== Singularity Operator - EverythingDB v0.1.1 Demo ===")
-    db = EverythingDB(":memory:")  # In-memory for clean demo
-    # Seed with foundational sequences (your premise + axioms)
-    db.add_sequence(["All", "things", "knowable", "are", "in", "the", "database"], {"type": "premise", "source": "user_query"})
+    print("=== Singularity Operator - EverythingDB v0.1.2 (Groq Integrated) Demo ===")
+    db = EverythingDB(":memory:")
+    db.add_sequence(["All", "things", "knowable", "are", "in", "the", "database"], {"type": "premise"})
     db.add_sequence("Everything is in there.", {"type": "core_truth"})
-    db.add_sequence({"architecture": "enables", "all": "possible"}, {"type": "architecture"})
-    db.add_sequence([42, 1, 2, 3], {"type": "numeric_pattern", "meaning": "answer to life + sequence start"})
     print("Seeds added.")
-    print("Initial Metrics:", db.compute_metrics())
-    print("Proposed unknowns (smarter, based on seeds):", db.propose_unknown(2))
-    expanded = db.self_expand(3)
-    print(f"Self-expanded {expanded} new sequences (v0.1.1 intelligent proposals).")
-    print("Post-expand Metrics:", db.compute_metrics())
-    print("\nDemo complete. DB in-memory for this run. Persistence ready in real use (everything.db).")
-    print("Next: Prompt Grok to integrate real LLM (Groq) or SelfImprover module.")
+    print("Metrics:", db.compute_metrics())
+    props = db.propose_unknown(2)
+    print("Proposed (Groq or fallback):", props)
+    expanded = db.self_expand(2)
+    print(f"Self-expanded {expanded} sequences.")
+    print("Final Metrics:", db.compute_metrics())
+    print("\nTo use real Groq: export GROQ_API_KEY=your_key  (free tier at console.groq.com)")
+    print("Demo shows fallback if no key. Real LLM proposals are higher quality and more creative.")
     db.close()

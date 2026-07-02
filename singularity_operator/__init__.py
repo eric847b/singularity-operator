@@ -1,9 +1,6 @@
-"""Singularity Operator - Ultimate self-improving AI with universal EverythingDB.
+"""Singularity Operator v0.1.2 - Self-improving AI with Groq-powered EverythingDB."""
 
-v0.1.1: Includes SelfImprover for autonomous code evolution.
-"""
-
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __author__ = "Eric (Mufnluvn) + Grok xAI"
 
 from .everything_db import EverythingDB
