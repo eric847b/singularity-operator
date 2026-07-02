@@ -1,0 +1,12 @@
+# Singularity Operator v0.1 - EverythingDB
+# Stdlib only for zero-dep start and immediate runnability.
+# Future iterations (prompt me):
+#   numpy
+#   faiss-cpu
+#   sentence-transformers
+#   groq
+#   requests (for API calls)
+#   fastapi / uvicorn for server
+#   networkx or neo4j for graphs
+
+# Run: pip install -r requirements.txt (when deps added)
