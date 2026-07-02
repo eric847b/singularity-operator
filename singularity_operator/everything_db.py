@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""EverythingDB v0.1.3 - Core module for Singularity Operator.
+"""EverythingDB v0.1.4 - Core module for Singularity Operator.
 
-Compact Groq-powered universal data sequence store with FS-backed response cache.
-Cache uses the existing SQLite DB for atomicity and simplicity (no new files/deps).
+Compact Groq-powered universal data sequence store with transistor-inspired caching.
+L1-like fast in-memory cache (SRAM/latch analogy) + persistent SQLite backing.
+Small fixed size + simple FIFO eviction for hot prompt locality.
 
-v0.1.3: Added _get_from_cache / _save_to_cache + integration in _call_groq.
-Cache hits avoid redundant API calls. cache_hits metric tracked.
+v0.1.4: Added bounded in-memory L1 cache layer in front of DB cache.
+Explored transistor-level mechanisms (6T SRAM cells, latches, hierarchy) and applied as fast-path memory + eviction.
 """
 
 import sqlite3
@@ -16,6 +17,8 @@ import datetime
 import random
 import os
 
+from collections import OrderedDict
+
 try:
     import requests
 except ImportError:
@@ -23,13 +26,15 @@ except ImportError:
 
 
 class EverythingDB:
-    """Universal sequence database with Groq-powered knowledge completion + response cache."""
+    """Universal sequence database with Groq-powered knowledge completion + two-level cache (fast in-memory L1 + persistent DB)."""
 
-    def __init__(self, db_path: str = "everything.db"):
+    def __init__(self, db_path: str = "everything.db", mem_cache_size: int = 64):
         self.db_path = db_path
         self.conn = sqlite3.connect(db_path)
         self.llm_calls = 0
         self.cache_hits = 0
+        self._mem_cache_size = mem_cache_size
+        self._mem_cache: OrderedDict = OrderedDict()  # prompt_hash -> response (L1 SRAM-like)
         self._init_schema()
 
     def _init_schema(self):
@@ -102,20 +107,42 @@ class EverythingDB:
         return [{"hash": r[0], "sequence": json.loads(r[1]), "metadata": json.loads(r[2])} for r in c.fetchall()]
 
     def _get_from_cache(self, prompt: str) -> Optional[str]:
-        """Check FS-backed (SQLite) cache for prior Groq response."""
+        """Transistor-inspired two-level cache: L1 in-memory (fast latch) then DB."""
         h = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
+
+        # L1 in-memory (SRAM-like fast path)
+        if h in self._mem_cache:
+            self.cache_hits += 1
+            self._mem_cache.move_to_end(h)  # LRU touch
+            print("[L1 Cache] Groq response hit (in-memory latch)")
+            return self._mem_cache[h]
+
+        # L2 persistent DB
         c = self.conn.cursor()
         c.execute("SELECT response FROM groq_cache WHERE prompt_hash=?", (h,))
         row = c.fetchone()
         if row:
             self.cache_hits += 1
-            print("[Cache] Groq response hit")
+            print("[L2 Cache] Groq response hit (DB)")
+            # Promote to L1
+            self._mem_cache[h] = row[0]
+            self._mem_cache.move_to_end(h)
+            if len(self._mem_cache) > self._mem_cache_size:
+                self._mem_cache.popitem(last=False)  # Evict oldest (FIFO/LRU-ish)
             return row[0]
         return None
 
     def _save_to_cache(self, prompt: str, response: str):
-        """Persist Groq response to FS-backed cache."""
+        """Write to both L1 (fast) and L2 (persistent). Evict from L1 if full."""
         h = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
+
+        # L1 in-memory
+        self._mem_cache[h] = response
+        self._mem_cache.move_to_end(h)
+        if len(self._mem_cache) > self._mem_cache_size:
+            self._mem_cache.popitem(last=False)  # Evict oldest
+
+        # L2 persistent DB
         c = self.conn.cursor()
         c.execute('''INSERT OR REPLACE INTO groq_cache
             (prompt_hash, response, created_at) VALUES (?, ?, ?)''',
@@ -123,14 +150,13 @@ class EverythingDB:
         self.conn.commit()
 
     def _call_groq(self, prompt: str, model: str = "llama3-70b-8192", max_tokens: int = 600) -> Optional[str]:
-        """Call free Groq API with cache check first."""
+        """Call free Groq API with transistor-inspired two-level cache."""
         if requests is None:
             return None
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             return None
 
-        # FS cache check (highest ROI for repeated/similar proposals)
         cached = self._get_from_cache(prompt)
         if cached is not None:
             return cached
@@ -162,9 +188,7 @@ class EverythingDB:
             return None
 
     def propose_unknown(self, n: int = 3, context: str = "universal knowledge") -> List[Any]:
-        """Primary path: Groq LLM (cached) for high-quality novel sequences.
-        Falls back to intelligent mutation if no key or error.
-        """
+        """Primary path: Groq LLM (two-level cached) for high-quality novel sequences."""
         existing_summary = []
         try:
             c = self.conn.cursor()
@@ -229,7 +253,7 @@ Return ONLY valid JSON (no markdown, no extra text):
             for prop in self.propose_unknown(1):
                 seq = prop.get("seq", prop)
                 h = self.add_sequence(seq, {
-                    "source": "self_expand_v0.1.3",
+                    "source": "self_expand_v0.1.4",
                     "proposed": prop.get("rationale", ""),
                     "context": "universal knowledge completion"
                 })
@@ -249,6 +273,7 @@ Return ONLY valid JSON (no markdown, no extra text):
             "expansion_potential": round(potential, 6),
             "llm_calls": self.llm_calls,
             "cache_hits": self.cache_hits,
+            "mem_cache_size": len(self._mem_cache),
             "timestamp": datetime.datetime.utcnow().isoformat()
         }
 
@@ -257,19 +282,19 @@ Return ONLY valid JSON (no markdown, no extra text):
 
 
 if __name__ == "__main__":
-    print("=== Singularity Operator - EverythingDB v0.1.3 (Groq + FS Cache) Demo ===")
-    db = EverythingDB(":memory:")
+    print("=== Singularity Operator - EverythingDB v0.1.4 (Transistor-Level Caching) Demo ===")
+    db = EverythingDB(":memory:", mem_cache_size=8)  # Small L1 for demo
     db.add_sequence(["All", "things", "knowable", "are", "in", "the", "database"], {"type": "premise"})
     db.add_sequence("Everything is in there.", {"type": "core_truth"})
     print("Seeds added.")
     print("Metrics:", db.compute_metrics())
     props = db.propose_unknown(2)
     print("Proposed (Groq or fallback):", props)
-    # Second call with same prompt should hit cache (in real run with key)
-    props2 = db.propose_unknown(2)
-    print("Second propose (expect cache behavior if key present):", props2)
+    props2 = db.propose_unknown(2)  # Should hit L1 or L2
+    print("Second propose (cache behavior):", props2)
     expanded = db.self_expand(2)
     print(f"Self-expanded {expanded} sequences.")
     print("Final Metrics:", db.compute_metrics())
-    print("\nCache uses SQLite table (fs-backed). Set GROQ_API_KEY for real LLM + caching benefit.")
+    print("\nTwo-level cache: fast in-memory L1 (transistor latch-like) + persistent SQLite L2.")
+    print("Set GROQ_API_KEY for real LLM + caching benefit. mem_cache_size controls L1 capacity.")
     db.close()
