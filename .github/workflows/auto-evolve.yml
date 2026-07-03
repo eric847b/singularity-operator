@@ -1,0 +1,8 @@
+name: Auto-Evolve
+on: [push]
+jobs:
+  evolve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python singularity_operator.py

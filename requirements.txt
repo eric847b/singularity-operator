@@ -1,9 +1,1 @@
-# Singularity Operator
-# Core for v0.1.2 Groq integration
-requests
-
-# Future (prompt to add):
-# numpy
-# faiss-cpu
-# sentence-transformers
-# groq (official SDK alternative)
+groq
