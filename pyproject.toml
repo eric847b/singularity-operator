@@ -4,15 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "singularity-operator"
-version = "0.2.0"
-description = "The ultimate comprehensive self-improving AI system (Singularity Operator) with universal EverythingDB, SelfImprover, and full Orchestrator. Groq-powered, autonomous, transistor-model caching. All steps to next setpoint: swarm, userscript gen, browser hooks, GitHub seamless."
+version = "0.3.0"
+description = "v0.3.0 Setpoint: All steps implemented - Enhanced Orchestrator with browser automation, multi-provider, metrics, full autonomous. EverythingDB + SelfImprover + Orchestrator perfected for Eric's ultimate system."
 authors = [{name = "Eric (Mufnluvn)"}]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["requests"]
-
-[project.optional-dependencies]
-test = ["pytest"]
-
-[tool.setuptools.packages.find]
-where = ["."]
