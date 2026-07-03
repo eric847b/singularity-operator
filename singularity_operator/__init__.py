@@ -1,21 +1,23 @@
-"""Singularity Operator v0.2.0
+"""Singularity Operator v0.3.0
 
-Ultimate self-improving AI: EverythingDB (sequences + Groq), SelfImprover (autonomous evolve), Orchestrator (swarm + userscript + hooks).
+Ultimate: EverythingDB + SelfImprover + Orchestrator + GroqWrapper + CLI.
+All to next setpoint: Groq integration, CLI, packaging, userscript output, full autonomous orchestration.
 
-All next steps implemented from setpoint: tighter integration, full autonomous orchestration, userscript generation, metrics, swarm.
+Compact | Autonomous | PDCA | Max Benefit | Zero Cost
+Mental model: Transistors (knowledge states) + latches (cache) + orchestrated flips (self-improvement)."""
 
-Mental model: Transistors (states), latches (cache), proposals (transitions), orchestrated flips for global perfection."""
-
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __author__ = "Eric (Mufnluvn) + Grok xAI"
 
 try:
     from .everything_db import EverythingDB
     from .self_improver import SelfImprover
     from .orchestrator import SingularityOrchestrator
+    from .groq_wrapper import GroqWrapper
 except ImportError:
     from everything_db import EverythingDB
     from self_improver import SelfImprover
     from orchestrator import SingularityOrchestrator
+    from groq_wrapper import GroqWrapper
 
-__all__ = ["EverythingDB", "SelfImprover", "SingularityOrchestrator"]
+__all__ = ["EverythingDB", "SelfImprover", "SingularityOrchestrator", "GroqWrapper"]

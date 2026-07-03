@@ -5,8 +5,17 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "singularity-operator"
 version = "0.3.0"
-description = "v0.3.0 Setpoint: All steps implemented - Enhanced Orchestrator with browser automation, multi-provider, metrics, full autonomous. EverythingDB + SelfImprover + Orchestrator perfected for Eric's ultimate system."
-authors = [{name = "Eric (Mufnluvn)"}]
+description = "Ultimate self-improving Singularity Operator v0.3: EverythingDB + SelfImprover + Orchestrator + GroqWrapper + CLI. Full autonomous, userscript gen, browser hooks, swarm, GitHub seamless. Compact, PDCA, max benefit."
+authors = [{name = "Eric (Mufnluvn) + Grok xAI"}]
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["requests"]
+dependencies = ["requests", "groq"]
+
+[project.scripts]
+singularity = "singularity_operator.cli:main"
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["."]
