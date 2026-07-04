@@ -1,8 +1,8 @@
-"""Singularity Operator v0.4.0 - All setpoints in a row: Orchestrator + GroqClient + BrowserAutomation + GitHubSeamless + UserscriptGenerator + EverythingDB (retry, difflib sim, L1/L2 demo, persist) + SelfImprover (real edits, PDCA rollback, metrics).
+"""Singularity Operator v0.4.0 - All setpoints in a row: Orchestrator + GroqClient + BrowserAutomation + GitHubSeamless + UserscriptGenerator + EverythingDB (retry, difflib sim, L1/L2 demo, persist, get_health_snapshot) + SelfImprover (real edits, PDCA rollback, health-aware discovery).
 
-Full autonomous self-evolving system with GitHub integration, advanced userscripts, browser remote, multi-AI swarm, EverythingDB proposals, SelfImprover cycles with safe code surgery.
+Full autonomous self-evolving system with GitHub integration, advanced userscripts, browser remote, multi-AI swarm, EverythingDB proposals, SelfImprover cycles with safe code surgery and health-driven decisions.
 
-Highest ROI upgrades shipped: robust Groq loops, demonstrable transistor cache model, real autonomous code evolution with safety nets. Compact, zero bloat, PDCA everywhere. Perfection iteration continues.
+Highest ROI upgrades shipped: robust Groq loops, demonstrable transistor cache model, real autonomous code evolution with safety nets, health snapshot observability for intelligent self-improvement. Compact, zero bloat, PDCA everywhere. Perfection iteration continues.
 
 User intent: Build the end-all-be-all self-improving AI. Eric (Mufnluvn) + Grok xAI"""
 
