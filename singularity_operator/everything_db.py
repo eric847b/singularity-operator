@@ -7,7 +7,7 @@ L1 in-memory fast latch (SRAM-like) + L2 persistent SQLite backing.
 Mental model: Knowledge = transistors (on/off states). Cache = latches. Proposals = state transitions.
 Self-evolving knowledge fabric for universal sequence completion.
 
-v0.4.0: Added retry logic with backoff, difflib-powered similarity search, explicit L1/L2 cache demo, basic metrics persistence, configurable Groq params, get_health_snapshot, and self_test. Zero-cost robustness + demonstrable transistor model + self-validation.
+v0.4.0: Added retry logic with backoff, difflib-powered similarity search, explicit L1/L2 cache demo, basic metrics persistence, configurable Groq params, get_health_snapshot, self_test (enhanced with expand), and health delta reporting. Zero-cost robustness + demonstrable transistor model + self-validation.
 """
 
 import sqlite3
@@ -333,22 +333,39 @@ Return ONLY valid JSON (no markdown, no extra text):
         }
 
     def self_test(self) -> Dict[str, Any]:
-        """Self-contained validation test for autonomous/CI use. Exercises health, propose, expand, and reports results. Zero-cost self-validation."""
+        """Self-contained validation test for autonomous/CI use. Exercises health, propose, expand, and reports results with health delta. Zero-cost self-validation."""
         start = datetime.datetime.utcnow()
         health_before = self.get_health_snapshot()
+        initial_count = health_before["metrics"]["total_sequences"]
+
+        # Propose and add some sequences
         proposals = self.propose_unknown(2)
-        added = 0
+        added_propose = 0
         for p in proposals:
             seq = p.get("seq", p)
             self.add_sequence(seq, {"source": "self_test", "rationale": p.get("rationale", "")})
-            added += 1
+            added_propose += 1
+
+        # Also run a small self_expand for more realism
+        added_expand = self.self_expand(1)
+
         health_after = self.get_health_snapshot()
+        final_count = health_after["metrics"]["total_sequences"]
+
         return {
             "test_passed": True,
             "health_before": health_before,
             "health_after": health_after,
+            "sequences_added": added_propose + added_expand,
             "proposals_generated": len(proposals),
-            "sequences_added": added,
+            "expand_added": added_expand,
+            "initial_sequence_count": initial_count,
+            "final_sequence_count": final_count,
+            "health_delta": {
+                "expansion_potential_before": health_before["metrics"]["expansion_potential"],
+                "expansion_potential_after": health_after["metrics"]["expansion_potential"],
+                "total_sequences_delta": final_count - initial_count
+            },
             "timestamp": start.isoformat(),
             "duration_seconds": (datetime.datetime.utcnow() - start).total_seconds()
         }
@@ -387,7 +404,7 @@ if __name__ == "__main__":
     db.add_sequence("Everything is in there.", {"type": "core_truth"})
     print("Metrics:", db.compute_metrics())
     print("Health Snapshot:", db.get_health_snapshot())
-    print("Self Test:", db.self_test())
+    print("Self Test (enhanced):", db.self_test())
     print("Proposed:", db.propose_unknown(2))
     print("Expanded:", db.self_expand(2))
     print("Final Metrics:", db.compute_metrics())
