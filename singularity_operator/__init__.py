@@ -1,10 +1,8 @@
-"""Singularity Operator v0.3.0
+"""Singularity Operator v0.3.0 - Multi-setpoint leap.
 
-Ultimate: EverythingDB + SelfImprover + Orchestrator + GroqWrapper + CLI.
-All to next setpoint: Groq integration, CLI, packaging, userscript output, full autonomous orchestration.
+All setpoints in a row: GroqClient, BrowserAutomation, GitHubSeamless, AdvancedUserscriptGenerator + full integration in Orchestrator.
 
-Compact | Autonomous | PDCA | Max Benefit | Zero Cost
-Mental model: Transistors (knowledge states) + latches (cache) + orchestrated flips (self-improvement)."""
+Autonomous, self-modifying, multi-AI, GitHub seamless, browser/remote control, userscript perfection."""
 
 __version__ = "0.3.0"
 __author__ = "Eric (Mufnluvn) + Grok xAI"
@@ -13,11 +11,17 @@ try:
     from .everything_db import EverythingDB
     from .self_improver import SelfImprover
     from .orchestrator import SingularityOrchestrator
-    from .groq_wrapper import GroqWrapper
+    from .groq_client import GroqClient
+    from .browser_automation import BrowserAutomation
+    from .github_seamless import GitHubSeamless
+    from .advanced_userscript import AdvancedUserscriptGenerator
 except ImportError:
     from everything_db import EverythingDB
     from self_improver import SelfImprover
     from orchestrator import SingularityOrchestrator
-    from groq_wrapper import GroqWrapper
+    from groq_client import GroqClient
+    from browser_automation import BrowserAutomation
+    from github_seamless import GitHubSeamless
+    from advanced_userscript import AdvancedUserscriptGenerator
 
-__all__ = ["EverythingDB", "SelfImprover", "SingularityOrchestrator", "GroqWrapper"]
+__all__ = ["EverythingDB", "SelfImprover", "SingularityOrchestrator", "GroqClient", "BrowserAutomation", "GitHubSeamless", "AdvancedUserscriptGenerator"]
