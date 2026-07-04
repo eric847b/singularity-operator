@@ -6,7 +6,7 @@ Can run independently (needs no one). Shares cache with EverythingDB when provid
 
 Mental model: Self-improver = reconfigurable logic array that flips and rewires transistors (code atoms) in the codebase autonomously.
 
-v0.4.0: Real targeted code edits (parseable OLD->NEW markers), PDCA syntax verification + auto-rollback on failure, improvements_made tracking, safer autonomous evolution. Zero-cost upgrade to actual self-coding capability.
+v0.4.0: Real targeted code edits (parseable OLD->NEW markers), PDCA syntax verification + auto-rollback on failure, improvements_made tracking, enhanced discovery. Zero-cost upgrade to actual self-coding capability.
 """
 
 import os
@@ -205,12 +205,25 @@ Otherwise just give the suggestion text."""
             return False
 
     def self_discover(self) -> Dict[str, Any]:
-        """Autonomous discovery: Analyzes state and proposes next high-ROI improvement or sequence. Now considers improvements_made."""
+        """Autonomous discovery: Analyzes state and proposes next high-ROI improvement or sequence. Now factors in health snapshot from shared_db when available for smarter decisions."""
+        health = None
+        if self._shared_db and hasattr(self._shared_db, 'get_health_snapshot'):
+            try:
+                health = self._shared_db.get_health_snapshot()
+            except:
+                pass
+
+        if health and health.get('status') == 'needs_expansion':
+            return {
+                "type": "sequence_proposal",
+                "context": "knowledge base needs expansion per health snapshot",
+                "n": 5
+            }
         if len(self.log) > 5 or self.improvements_made > 2:
             return {
                 "type": "code_improvement",
                 "target": "singularity_operator/self_improver.py",
-                "goal": "Further enhance autonomous monitoring, PDCA robustness, and integration with EverythingDB for metrics-driven evolution"
+                "goal": "Further enhance autonomous monitoring, PDCA robustness, and integration with health snapshots"
             }
         return {
             "type": "sequence_proposal",
