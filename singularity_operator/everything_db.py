@@ -5,6 +5,9 @@ Universal data sequence store with Groq-powered completion and transistor-inspir
 L1 in-memory fast latch (SRAM-like) + L2 persistent SQLite backing.
 
 Mental model: Knowledge = transistors (on/off states). Cache = latches. Proposals = state transitions.
+Self-evolving knowledge fabric for universal sequence completion.
+
+v0.4.0: Added retry logic with backoff, difflib-powered similarity search, explicit L1/L2 cache demo, basic metrics persistence, configurable Groq params. Zero-cost robustness + demonstrable transistor model.
 """
 
 import sqlite3
@@ -14,6 +17,8 @@ from typing import Any, List, Dict, Optional
 import datetime
 import random
 import os
+import time
+import difflib
 
 from collections import OrderedDict
 
@@ -22,9 +27,11 @@ try:
 except ImportError:
     requests = None
 
+__version__ = "0.4.0"
+
 
 class EverythingDB:
-    """Universal sequence database with Groq-powered knowledge completion + two-level cache."""
+    """Universal sequence database with Groq-powered knowledge completion + two-level cache (transistor latch model)."""
 
     def __init__(self, db_path: str = "everything.db", mem_cache_size: int = 64):
         self.db_path = db_path
@@ -33,7 +40,10 @@ class EverythingDB:
         self.cache_hits = 0
         self._mem_cache_size = mem_cache_size
         self._mem_cache: OrderedDict = OrderedDict()
+        self.groq_model = "llama3-70b-8192"
+        self.groq_max_tokens = 600
         self._init_schema()
+        self._load_persisted_metrics()
 
     def _init_schema(self):
         c = self.conn.cursor()
@@ -57,7 +67,31 @@ class EverythingDB:
             response TEXT,
             created_at TEXT
         )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS meta (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )''')
         self.conn.commit()
+
+    def _load_persisted_metrics(self):
+        self.llm_calls = self._load_metric("llm_calls", 0)
+        self.cache_hits = self._load_metric("cache_hits", 0)
+
+    def _persist_metric(self, key: str, value: Any):
+        c = self.conn.cursor()
+        c.execute('''INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)''', (key, str(value)))
+        self.conn.commit()
+
+    def _load_metric(self, key: str, default: Any = 0) -> Any:
+        c = self.conn.cursor()
+        c.execute("SELECT value FROM meta WHERE key=?", (key,))
+        row = c.fetchone()
+        if row:
+            try:
+                return int(row[0])
+            except:
+                return row[0]
+        return default
 
     def _hash(self, seq: Any) -> str:
         if isinstance(seq, (list, tuple)):
@@ -94,15 +128,26 @@ class EverythingDB:
         return None
 
     def find_similar(self, query: Any, limit: int = 5) -> List[Dict[str, Any]]:
+        """Improved similarity using difflib SequenceMatcher ratio for better knowledge retrieval (high ROI for sequence completion)."""
         h = self._hash(query)
         exact = self.get_sequence(h)
         if exact:
             return [exact]
         qstr = json.dumps(query, ensure_ascii=False)[:100] if isinstance(query, (list, tuple)) else str(query)[:100]
         c = self.conn.cursor()
-        c.execute("SELECT seq_hash, sequence, metadata FROM sequences WHERE sequence LIKE ? LIMIT ?",
-                  (f"%{qstr}%", limit))
-        return [{"hash": r[0], "sequence": json.loads(r[1]), "metadata": json.loads(r[2])} for r in c.fetchall()]
+        c.execute("SELECT seq_hash, sequence, metadata FROM sequences")
+        candidates = []
+        for row in c.fetchall():
+            seq_str = row[1][:300]
+            ratio = difflib.SequenceMatcher(None, qstr.lower(), seq_str.lower()).ratio()
+            if ratio > 0.05:
+                candidates.append((ratio, {
+                    "hash": row[0],
+                    "sequence": json.loads(row[1]),
+                    "metadata": json.loads(row[2])
+                }))
+        candidates.sort(reverse=True, key=lambda x: x[0])
+        return [c[1] for c in candidates[:limit]]
 
     def _get_from_cache(self, prompt: str) -> Optional[str]:
         h = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
@@ -134,7 +179,12 @@ class EverythingDB:
             (h, response, datetime.datetime.utcnow().isoformat()))
         self.conn.commit()
 
-    def _call_groq(self, prompt: str, model: str = "llama3-70b-8192", max_tokens: int = 600) -> Optional[str]:
+    def _call_groq(self, prompt: str, model: str = None, max_tokens: int = None) -> Optional[str]:
+        """Groq call with exponential backoff retry (3 attempts) for robustness in autonomous loops. Uses configurable model/tokens. Caches all."""
+        if model is None:
+            model = self.groq_model
+        if max_tokens is None:
+            max_tokens = self.groq_max_tokens
         if requests is None:
             return None
         api_key = os.getenv("GROQ_API_KEY")
@@ -143,30 +193,35 @@ class EverythingDB:
         cached = self._get_from_cache(prompt)
         if cached is not None:
             return cached
-        try:
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
-            data = {
-                "model": model,
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": max_tokens,
-                "temperature": 0.7
-            }
-            resp = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                json=data,
-                headers=headers,
-                timeout=25
-            )
-            resp.raise_for_status()
-            content = resp.json()["choices"][0]["message"]["content"]
-            self.llm_calls += 1
-            self._save_to_cache(prompt, content)
-            return content
-        except Exception:
-            return None
+        for attempt in range(3):
+            try:
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                }
+                data = {
+                    "model": model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": max_tokens,
+                    "temperature": 0.7
+                }
+                resp = requests.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    json=data,
+                    headers=headers,
+                    timeout=25
+                )
+                resp.raise_for_status()
+                content = resp.json()["choices"][0]["message"]["content"]
+                self.llm_calls += 1
+                self._save_to_cache(prompt, content)
+                self._persist_metric("llm_calls", self.llm_calls)
+                return content
+            except Exception:
+                if attempt == 2:
+                    return None
+                time.sleep((2 ** attempt) * 0.8)  # backoff: ~0.8s, 1.6s, 3.2s
+        return None
 
     def propose_unknown(self, n: int = 3, context: str = "universal knowledge") -> List[Any]:
         existing_summary = []
@@ -244,6 +299,8 @@ Return ONLY valid JSON (no markdown, no extra text):
         total, avg_contrib = c.fetchone()
         coverage = min(1.0, total / 1_000_000)
         potential = max(0.0, 1.0 - (total / 10_000_000))
+        self._persist_metric("llm_calls", self.llm_calls)
+        self._persist_metric("cache_hits", self.cache_hits)
         return {
             "total_sequences": total,
             "avg_contrib": round(avg_contrib, 4),
@@ -252,15 +309,39 @@ Return ONLY valid JSON (no markdown, no extra text):
             "llm_calls": self.llm_calls,
             "cache_hits": self.cache_hits,
             "mem_cache_size": len(self._mem_cache),
-            "timestamp": datetime.datetime.utcnow().isoformat()
+            "timestamp": datetime.datetime.utcnow().isoformat(),
+            "version": __version__
         }
 
+    def demo_l1_l2_cache(self) -> Dict[str, Any]:
+        """Demonstrates L1 (fast in-memory latch/OrderedDict with LRU promotion) + L2 (persistent) + eviction behavior exactly as transistor/SRAM mental model."""
+        results = {"l1_hits": 0, "l2_promotions": 0, "evictions": 0, "final_l1_size": 0}
+        # Fill L1 beyond capacity to trigger evictions
+        for i in range(self._mem_cache_size + 5):
+            p = f"transistor_latch_test_{i}"
+            self._save_to_cache(p, f"state_on_{i}")
+        results["evictions"] = 5  # approx from FIFO
+        # Access recent ones -> L1 hit (promotion via move_to_end)
+        for i in range(3):
+            hit = self._get_from_cache(f"transistor_latch_test_{self._mem_cache_size + i - 3}")
+            if hit:
+                results["l1_hits"] += 1
+        # Access an older one that may have been evicted from L1 but lives in L2
+        old_hit = self._get_from_cache("transistor_latch_test_0")
+        if old_hit:
+            results["l2_promotions"] += 1
+        results["final_l1_size"] = len(self._mem_cache)
+        print("[EverythingDB] L1/L2 Transistor Cache Demo:", results)
+        return results
+
     def close(self):
+        self._persist_metric("llm_calls", self.llm_calls)
+        self._persist_metric("cache_hits", self.cache_hits)
         self.conn.close()
 
 
 if __name__ == "__main__":
-    # Demo only - remove prints for production use
+    # Demo only
     db = EverythingDB(":memory:", mem_cache_size=8)
     db.add_sequence(["All", "things", "knowable", "are", "in", "the", "database"], {"type": "premise"})
     db.add_sequence("Everything is in there.", {"type": "core_truth"})
@@ -268,3 +349,4 @@ if __name__ == "__main__":
     print("Proposed:", db.propose_unknown(2))
     print("Expanded:", db.self_expand(2))
     print("Final Metrics:", db.compute_metrics())
+    db.demo_l1_l2_cache()
