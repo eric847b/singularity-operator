@@ -6,7 +6,7 @@ Can run independently (needs no one). Shares cache with EverythingDB when provid
 
 Mental model: Self-improver = reconfigurable logic array that flips and rewires transistors (code atoms) in the codebase autonomously.
 
-v0.4.0: Real targeted code edits, PDCA with rollback, health-aware discovery + adaptive autonomous_loop (score-based expansion vs code focus), and now health-aware multi-model routing in _call_groq using shared_db's selector. Zero-cost self-regulating intelligence.
+v0.4.0: Real targeted code edits, PDCA with rollback, health-aware discovery + adaptive autonomous_loop (score-based expansion vs code focus), multi-model routing using overall_health_score, and now logging of routing decisions in _call_groq for full observability. Zero-cost self-regulating intelligence.
 """
 
 import os
@@ -61,9 +61,7 @@ class SelfImprover:
         self._mem_cache[h] = response
 
     def _call_groq(self, prompt: str, model: str = None, max_tokens: int = 800, health_score: float = None) -> Optional[str]:
-        """Groq call with health-aware multi-model routing.
-        Uses shared_db's _select_groq_model if health_score provided or available.
-        """
+        """Groq call with health-aware multi-model routing and logging."""
         if model is None:
             if health_score is not None:
                 if self._shared_db and hasattr(self._shared_db, '_select_groq_model'):
@@ -82,6 +80,17 @@ class SelfImprover:
                     model = "llama3-70b-8192"
             else:
                 model = "llama3-70b-8192"
+
+        # Log routing decision for observability (zero-cost metrics)
+        if health_score is not None:
+            print(f"[SelfImprover] Routing: health_score={health_score:.1f} -> model={model}")
+        elif self._shared_db and hasattr(self._shared_db, 'get_health_snapshot'):
+            try:
+                health = self._shared_db.get_health_snapshot()
+                score = health.get('overall_health_score', 50.0)
+                print(f"[SelfImprover] Routing: health_score={score:.1f} -> model={model}")
+            except:
+                pass
 
         if max_tokens is None:
             max_tokens = 800
@@ -299,7 +308,7 @@ Otherwise just give the suggestion text."""
             return "Already running"
         self._thread = threading.Thread(target=self.autonomous_loop, args=(interval,), daemon=True)
         self._thread.start()
-        return "Autonomous mode started (needs no one) - v0.4.0 PDCA + health logging + score-based adaptive expansion + multi-model routing"
+        return "Autonomous mode started (needs no one) - v0.4.0 PDCA + health logging + score-based adaptive expansion + multi-model routing + observability"
 
     def stop_autonomous(self):
         self._running = False
