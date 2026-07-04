@@ -7,7 +7,7 @@ L1 in-memory fast latch (SRAM-like) + L2 persistent SQLite backing.
 Mental model: Knowledge = transistors (on/off states). Cache = latches. Proposals = state transitions.
 Self-evolving knowledge fabric for universal sequence completion.
 
-v0.4.0: Added retry logic with backoff, difflib-powered similarity search, explicit L1/L2 cache demo, basic metrics persistence, configurable Groq params, get_health_snapshot (with overall score), self_test (enhanced with expand and deltas), and health delta reporting. Zero-cost robustness + demonstrable transistor model + self-validation.
+v0.4.0: Added retry logic with backoff, difflib-powered similarity search, explicit L1/L2 cache demo, basic metrics persistence, configurable Groq params, get_health_snapshot (with overall score + recommendation), self_test (enhanced), and now multi-model/cost-quality routing for Groq calls using overall_health_score. Zero-cost robustness + self-regulating intelligence.
 """
 
 import sqlite3
@@ -33,6 +33,13 @@ __version__ = "0.4.0"
 class EverythingDB:
     """Universal sequence database with Groq-powered knowledge completion + two-level cache (transistor latch model)."""
 
+    # Cost/quality tiers for Groq models (example mapping - adjust based on real pricing)
+    GROQ_MODELS = {
+        "low_cost_fast": "llama3-8b-8192",      # Cheaper, faster, good for exploration/expansion
+        "balanced": "llama3-70b-8192",       # Good balance
+        "high_quality": "llama3-70b-8192",    # Highest quality (can swap with mixtral or future models)
+    }
+
     def __init__(self, db_path: str = "everything.db", mem_cache_size: int = 64):
         self.db_path = db_path
         self.conn = sqlite3.connect(db_path)
@@ -40,7 +47,7 @@ class EverythingDB:
         self.cache_hits = 0
         self._mem_cache_size = mem_cache_size
         self._mem_cache: OrderedDict = OrderedDict()
-        self.groq_model = "llama3-70b-8192"
+        self.groq_model = self.GROQ_MODELS["balanced"]
         self.groq_max_tokens = 600
         self._init_schema()
         self._load_persisted_metrics()
@@ -179,12 +186,31 @@ class EverythingDB:
             (h, response, datetime.datetime.utcnow().isoformat()))
         self.conn.commit()
 
-    def _call_groq(self, prompt: str, model: str = None, max_tokens: int = None) -> Optional[str]:
-        """Groq call with exponential backoff retry (3 attempts) for robustness in autonomous loops. Uses configurable model/tokens. Caches all."""
+    def _select_groq_model(self, health_score: float = 50.0) -> str:
+        """Multi-model / cost-quality router.
+        Uses overall_health_score to balance cost vs quality.
+        Low health -> cheaper/faster model for more exploration.
+        High health -> higher quality model.
+        """
+        if health_score < 40:
+            return self.GROQ_MODELS["low_cost_fast"]
+        elif health_score > 70:
+            return self.GROQ_MODELS["high_quality"]
+        else:
+            return self.GROQ_MODELS["balanced"]
+
+    def _call_groq(self, prompt: str, model: str = None, max_tokens: int = None, health_score: float = None) -> Optional[str]:
+        """Groq call with exponential backoff retry (3 attempts).
+        Now supports health_score for intelligent model routing.
+        """
         if model is None:
-            model = self.groq_model
+            if health_score is not None:
+                model = self._select_groq_model(health_score)
+            else:
+                model = self.groq_model
         if max_tokens is None:
             max_tokens = self.groq_max_tokens
+
         if requests is None:
             return None
         api_key = os.getenv("GROQ_API_KEY")
@@ -220,7 +246,7 @@ class EverythingDB:
             except Exception:
                 if attempt == 2:
                     return None
-                time.sleep((2 ** attempt) * 0.8)  # backoff: ~0.8s, 1.6s, 3.2s
+                time.sleep((2 ** attempt) * 0.8)
         return None
 
     def propose_unknown(self, n: int = 3, context: str = "universal knowledge") -> List[Any]:
@@ -231,6 +257,10 @@ class EverythingDB:
             existing_summary = [json.loads(row[0]) for row in c.fetchall()]
         except:
             pass
+
+        # Get health for model routing
+        health = self.get_health_snapshot()
+        health_score = health.get("overall_health_score", 50.0)
 
         prompt = f"""You are the knowledge completion engine for the Singularity Operator.
 
@@ -248,7 +278,7 @@ Return ONLY valid JSON (no markdown, no extra text):
 ]
 """
 
-        llm_out = self._call_groq(prompt)
+        llm_out = self._call_groq(prompt, health_score=health_score)
         if llm_out:
             try:
                 cleaned = llm_out.strip().strip("`").replace("```json", "").replace("```", "").strip()
@@ -314,7 +344,7 @@ Return ONLY valid JSON (no markdown, no extra text):
         }
 
     def get_health_snapshot(self) -> Dict[str, Any]:
-        """High-ROI observability method: combined health + metrics snapshot for autonomous monitoring and PDCA. Includes simple overall health score."""
+        """High-ROI observability method: combined health + metrics snapshot for autonomous monitoring and PDCA. Includes overall health score and recommendation."""
         metrics = self.compute_metrics()
         cache_info = {
             "l1_size": len(self._mem_cache),
@@ -322,10 +352,9 @@ Return ONLY valid JSON (no markdown, no extra text):
             "recent_hits": self.cache_hits
         }
 
-        # Simple overall health score (0-100)
         expansion = metrics["expansion_potential"]
         coverage = metrics["estimated_coverage"]
-        activity = min(1.0, metrics["llm_calls"] / 100.0)  # normalize activity
+        activity = min(1.0, metrics["llm_calls"] / 100.0)
         overall_score = round((expansion * 40 + coverage * 40 + activity * 20), 1)
 
         status = "healthy"
@@ -344,7 +373,7 @@ Return ONLY valid JSON (no markdown, no extra text):
             },
             "overall_health_score": overall_score,
             "status": status,
-            "recommendation": "Expand knowledge" if expansion > 0.6 else "Continue improving code and observability"
+            "recommendation": "Expand knowledge aggressively" if expansion > 0.6 else "Focus on code improvements and observability"
         }
 
     def self_test(self) -> Dict[str, Any]:
@@ -353,7 +382,6 @@ Return ONLY valid JSON (no markdown, no extra text):
         health_before = self.get_health_snapshot()
         initial_count = health_before["metrics"]["total_sequences"]
 
-        # Propose and add some sequences
         proposals = self.propose_unknown(2)
         added_propose = 0
         for p in proposals:
@@ -361,7 +389,6 @@ Return ONLY valid JSON (no markdown, no extra text):
             self.add_sequence(seq, {"source": "self_test", "rationale": p.get("rationale", "")})
             added_propose += 1
 
-        # Also run a small self_expand for more realism
         added_expand = self.self_expand(1)
 
         health_after = self.get_health_snapshot()
@@ -388,17 +415,14 @@ Return ONLY valid JSON (no markdown, no extra text):
     def demo_l1_l2_cache(self) -> Dict[str, Any]:
         """Demonstrates L1 (fast in-memory latch/OrderedDict with LRU promotion) + L2 (persistent) + eviction behavior exactly as transistor/SRAM mental model."""
         results = {"l1_hits": 0, "l2_promotions": 0, "evictions": 0, "final_l1_size": 0}
-        # Fill L1 beyond capacity to trigger evictions
         for i in range(self._mem_cache_size + 5):
             p = f"transistor_latch_test_{i}"
             self._save_to_cache(p, f"state_on_{i}")
-        results["evictions"] = 5  # approx from FIFO
-        # Access recent ones -> L1 hit (promotion via move_to_end)
+        results["evictions"] = 5
         for i in range(3):
             hit = self._get_from_cache(f"transistor_latch_test_{self._mem_cache_size + i - 3}")
             if hit:
                 results["l1_hits"] += 1
-        # Access an older one that may have been evicted from L1 but lives in L2
         old_hit = self._get_from_cache("transistor_latch_test_0")
         if old_hit:
             results["l2_promotions"] += 1
@@ -413,13 +437,12 @@ Return ONLY valid JSON (no markdown, no extra text):
 
 
 if __name__ == "__main__":
-    # Demo only
     db = EverythingDB(":memory:", mem_cache_size=8)
     db.add_sequence(["All", "things", "knowable", "are", "in", "the", "database"], {"type": "premise"})
     db.add_sequence("Everything is in there.", {"type": "core_truth"})
     print("Metrics:", db.compute_metrics())
     print("Health Snapshot:", db.get_health_snapshot())
-    print("Self Test (enhanced):", db.self_test())
+    print("Self Test:", db.self_test())
     print("Proposed:", db.propose_unknown(2))
     print("Expanded:", db.self_expand(2))
     print("Final Metrics:", db.compute_metrics())
