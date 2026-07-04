@@ -75,6 +75,12 @@ class SingularityOrchestrator:
             self.db._persist_metric("orchestrator_improvements", self.metrics["improvements"])
         except:
             pass
+        # New: Include health snapshot in results for observability
+        try:
+            health = self.db.get_health_snapshot()
+            results.append({"health_snapshot": health})
+        except:
+            pass
         print(f"Orchestrated cycle complete. Metrics: {self.metrics}")
         return results
 
