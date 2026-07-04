@@ -6,7 +6,7 @@ Can run independently (needs no one). Shares cache with EverythingDB when provid
 
 Mental model: Self-improver = reconfigurable logic array that flips and rewires transistors (code atoms) in the codebase autonomously.
 
-v0.4.0: Real targeted code edits (parseable OLD->NEW markers), PDCA syntax verification + auto-rollback on failure, improvements_made tracking, health-aware discovery, health logging in autonomous_loop, adaptive expansion, and now uses overall_health_score for smarter balancing between code improvement and knowledge expansion. Zero-cost upgrade to actual self-coding capability with observability.
+v0.4.0: Real targeted code edits, PDCA with rollback, health-aware discovery + adaptive autonomous_loop (score-based expansion vs code focus), and now health-aware multi-model routing in _call_groq using shared_db's selector. Zero-cost self-regulating intelligence.
 """
 
 import os
@@ -15,7 +15,7 @@ import threading
 import time
 from typing import Dict, Any, List, Optional
 import datetime
-import ast  # for safe syntax validation
+import ast
 
 try:
     import requests
@@ -60,7 +60,32 @@ class SelfImprover:
         h = str(hash(prompt))
         self._mem_cache[h] = response
 
-    def _call_groq(self, prompt: str, model: str = "llama3-70b-8192", max_tokens: int = 800) -> Optional[str]:
+    def _call_groq(self, prompt: str, model: str = None, max_tokens: int = 800, health_score: float = None) -> Optional[str]:
+        """Groq call with health-aware multi-model routing.
+        Uses shared_db's _select_groq_model if health_score provided or available.
+        """
+        if model is None:
+            if health_score is not None:
+                if self._shared_db and hasattr(self._shared_db, '_select_groq_model'):
+                    model = self._shared_db._select_groq_model(health_score)
+                else:
+                    model = "llama3-70b-8192"
+            elif self._shared_db and hasattr(self._shared_db, 'get_health_snapshot'):
+                try:
+                    health = self._shared_db.get_health_snapshot()
+                    score = health.get('overall_health_score', 50.0)
+                    if self._shared_db and hasattr(self._shared_db, '_select_groq_model'):
+                        model = self._shared_db._select_groq_model(score)
+                    else:
+                        model = "llama3-70b-8192"
+                except:
+                    model = "llama3-70b-8192"
+            else:
+                model = "llama3-70b-8192"
+
+        if max_tokens is None:
+            max_tokens = 800
+
         if requests is None:
             return None
         api_key = os.getenv("GROQ_API_KEY")
@@ -99,6 +124,15 @@ class SelfImprover:
         except FileNotFoundError:
             return {"error": f"File not found: {relative_path}"}
 
+        # Get health for model routing
+        health_score = None
+        if self._shared_db and hasattr(self._shared_db, 'get_health_snapshot'):
+            try:
+                health = self._shared_db.get_health_snapshot()
+                health_score = health.get('overall_health_score')
+            except:
+                pass
+
         llm_prompt = f"""You are an expert Python developer specializing in self-improving AI systems (Singularity Operator).
 
 Goal: {goal}
@@ -118,17 +152,16 @@ SUGGESTION: <one line summary>
 
 Otherwise just give the suggestion text."""
 
-        llm_out = self._call_groq(llm_prompt)
+        llm_out = self._call_groq(llm_prompt, health_score=health_score)
         if llm_out:
             return {
                 "path": relative_path,
                 "goal": goal,
                 "suggestion": llm_out.strip()[:800],
                 "raw": llm_out,
-                "note": "Groq-powered + cached + structured edit ready"
+                "note": "Groq-powered + cached + health-aware routing"
             }
 
-        # Fallback: simple improvement comment (preserves old behavior)
         suggestion = f"Add more self-documentation, metrics, and robustness for goal: {goal}"
         improved_lines = current.splitlines(keepends=True) + [f"# Self-improver applied: {suggestion}\n"]
         diff = difflib.unified_diff(
@@ -146,7 +179,6 @@ Otherwise just give the suggestion text."""
         }
 
     def apply_improvement(self, improvement: Dict[str, Any], backup: bool = True) -> bool:
-        """Applies improvement. Supports structured >>>OLD / >>>NEW edits for real code changes. Always runs PDCA Check (compile) + Act (rollback on fail). Zero bloat, maximum safety for autonomous self-evolution."""
         if "error" in improvement:
             self.log.append(improvement["error"])
             return False
@@ -162,7 +194,6 @@ Otherwise just give the suggestion text."""
             suggestion_text = improvement.get("suggestion", "")
             raw = improvement.get("raw", suggestion_text)
 
-            # Try structured edit if markers present
             if ">>>OLD:" in raw and ">>>NEW:" in raw:
                 try:
                     old_part = raw.split(">>>OLD:")[1].split(">>>NEW:")[0].strip()
@@ -177,23 +208,20 @@ Otherwise just give the suggestion text."""
                     self.log.append(f"Parse edit failed: {parse_e}")
 
             if not applied:
-                # Fallback: append comment (safe, non-breaking)
                 with open(full_path, "a", encoding="utf-8") as f:
                     f.write(f"\n\n# [SelfImprover v0.4.0] {suggestion_text[:200]}\n")
                 applied = True
                 self.log.append(f"Comment appended to {path}")
 
             if applied:
-                # PDCA Check phase: syntax validation
                 try:
                     with open(full_path, "r", encoding="utf-8") as f:
                         new_content = f.read()
-                    ast.parse(new_content)  # raises SyntaxError if bad
+                    ast.parse(new_content)
                     self.improvements_made += 1
                     self.log.append(f"PDCA Check PASSED for {path}")
                     return True
                 except SyntaxError as se:
-                    # Act: rollback
                     if backup and os.path.exists(full_path + ".bak"):
                         with open(full_path, "w", encoding="utf-8") as f:
                             f.write(original)
@@ -205,7 +233,6 @@ Otherwise just give the suggestion text."""
             return False
 
     def self_discover(self) -> Dict[str, Any]:
-        """Autonomous discovery: Analyzes state and proposes next high-ROI improvement or sequence. Now factors in health snapshot from shared_db when available for smarter decisions."""
         health = None
         if self._shared_db and hasattr(self._shared_db, 'get_health_snapshot'):
             try:
@@ -227,9 +254,9 @@ Otherwise just give the suggestion text."""
             }
         return {
             "type": "sequence_proposal",
-                "context": "universal knowledge gaps in current self-improvement state",
-                "n": 3
-            }
+            "context": "universal knowledge gaps in current self-improvement state",
+            "n": 3
+        }
 
     def autonomous_loop(self, interval: int = 300, max_cycles: int = None):
         self._running = True
@@ -245,15 +272,13 @@ Otherwise just give the suggestion text."""
                         score = health.get('overall_health_score', 50)
                         self.log.append(f"Cycle {cycle} health: {health.get('status')} | score: {score} | sequences: {health['metrics']['total_sequences']} | potential: {health['metrics']['expansion_potential']}")
 
-                        # Adaptive behavior based on overall_health_score
                         if score < 40 and hasattr(self._shared_db, 'self_expand'):
                             try:
-                                added = self._shared_db.self_expand(3)  # more aggressive expansion if health low
+                                added = self._shared_db.self_expand(3)
                                 self.log.append(f"Adaptive: low health score ({score}), triggered aggressive self_expand, added {added} sequences")
                             except:
                                 pass
                         elif score > 70:
-                            # If healthy, focus more on code improvements
                             self.log.append("Adaptive: high health score, prioritizing code improvements")
                     except:
                         pass
@@ -274,7 +299,7 @@ Otherwise just give the suggestion text."""
             return "Already running"
         self._thread = threading.Thread(target=self.autonomous_loop, args=(interval,), daemon=True)
         self._thread.start()
-        return "Autonomous mode started (needs no one) - v0.4.0 PDCA + health logging + score-based adaptive expansion"
+        return "Autonomous mode started (needs no one) - v0.4.0 PDCA + health logging + score-based adaptive expansion + multi-model routing"
 
     def stop_autonomous(self):
         self._running = False
@@ -294,7 +319,6 @@ Otherwise just give the suggestion text."""
 if __name__ == "__main__":
     improver = SelfImprover(".")
     print("SelfImprover v0.4.0 PDCA demo starting...")
-    # Demo a single improvement cycle on itself (safe)
     res = improver.run_cycle(["singularity_operator/self_improver.py"])
     print("Cycle result:", res)
     print("Improvements made:", improver.improvements_made)
