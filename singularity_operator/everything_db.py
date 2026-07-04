@@ -7,7 +7,7 @@ L1 in-memory fast latch (SRAM-like) + L2 persistent SQLite backing.
 Mental model: Knowledge = transistors (on/off states). Cache = latches. Proposals = state transitions.
 Self-evolving knowledge fabric for universal sequence completion.
 
-v0.4.0: Added retry logic with backoff, difflib-powered similarity search, explicit L1/L2 cache demo, basic metrics persistence, configurable Groq params, get_health_snapshot (with overall score + recommendation), self_test (enhanced), and now multi-model/cost-quality routing for Groq calls using overall_health_score. Zero-cost robustness + self-regulating intelligence.
+v0.4.0: Added retry logic with backoff, difflib-powered similarity search, explicit L1/L2 cache demo, basic metrics persistence, configurable Groq params, get_health_snapshot (with overall score + recommendation), self_test (enhanced), multi-model routing with health_score, and now logging of model selection decisions for observability/metrics. Zero-cost robustness + self-regulating intelligence.
 """
 
 import sqlite3
@@ -202,6 +202,7 @@ class EverythingDB:
     def _call_groq(self, prompt: str, model: str = None, max_tokens: int = None, health_score: float = None) -> Optional[str]:
         """Groq call with exponential backoff retry (3 attempts).
         Now supports health_score for intelligent model routing.
+        Logs selection decision for observability.
         """
         if model is None:
             if health_score is not None:
@@ -210,6 +211,10 @@ class EverythingDB:
                 model = self.groq_model
         if max_tokens is None:
             max_tokens = self.groq_max_tokens
+
+        # Log model selection decision (for metrics/observability)
+        if health_score is not None:
+            print(f"[EverythingDB] Routing: health_score={health_score:.1f} -> model={model}")
 
         if requests is None:
             return None
@@ -382,6 +387,7 @@ Return ONLY valid JSON (no markdown, no extra text):
         health_before = self.get_health_snapshot()
         initial_count = health_before["metrics"]["total_sequences"]
 
+        # Propose and add some sequences
         proposals = self.propose_unknown(2)
         added_propose = 0
         for p in proposals:
@@ -389,6 +395,7 @@ Return ONLY valid JSON (no markdown, no extra text):
             self.add_sequence(seq, {"source": "self_test", "rationale": p.get("rationale", "")})
             added_propose += 1
 
+        # Also run a small self_expand for more realism
         added_expand = self.self_expand(1)
 
         health_after = self.get_health_snapshot()
@@ -415,14 +422,17 @@ Return ONLY valid JSON (no markdown, no extra text):
     def demo_l1_l2_cache(self) -> Dict[str, Any]:
         """Demonstrates L1 (fast in-memory latch/OrderedDict with LRU promotion) + L2 (persistent) + eviction behavior exactly as transistor/SRAM mental model."""
         results = {"l1_hits": 0, "l2_promotions": 0, "evictions": 0, "final_l1_size": 0}
+        # Fill L1 beyond capacity to trigger evictions
         for i in range(self._mem_cache_size + 5):
             p = f"transistor_latch_test_{i}"
             self._save_to_cache(p, f"state_on_{i}")
-        results["evictions"] = 5
+        results["evictions"] = 5  # approx from FIFO
+        # Access recent ones -> L1 hit (promotion via move_to_end)
         for i in range(3):
             hit = self._get_from_cache(f"transistor_latch_test_{self._mem_cache_size + i - 3}")
             if hit:
                 results["l1_hits"] += 1
+        # Access an older one that may have been evicted from L1 but lives in L2
         old_hit = self._get_from_cache("transistor_latch_test_0")
         if old_hit:
             results["l2_promotions"] += 1
@@ -437,6 +447,7 @@ Return ONLY valid JSON (no markdown, no extra text):
 
 
 if __name__ == "__main__":
+    # Demo only
     db = EverythingDB(":memory:", mem_cache_size=8)
     db.add_sequence(["All", "things", "knowable", "are", "in", "the", "database"], {"type": "premise"})
     db.add_sequence("Everything is in there.", {"type": "core_truth"})
