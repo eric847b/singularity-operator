@@ -1,45 +1,36 @@
-# Singularity Operator v0.3.0 - ALL to Next Setpoint Implemented
+# Singularity Operator v0.2.1
 
-**Ultimate End-All-Be-All Self-Improving AI System** — Transistor mental model, two-level caching, Groq-powered EverythingDB completion, autonomous SelfImprover, Master Orchestrator, GroqWrapper, CLI entrypoint.
+**The End-All-Be-All Comprehensive Self-Improving AI System** — Transistor-states, two-level caching, Groq LPU-powered, autonomous SelfImprover + Master Orchestrator + GroqClient + BrowserAutomation hooks.
 
-## All Steps to This Setpoint (from v0.2)
-- Integrated compact GroqWrapper (self-iterating, PDCA, metrics, state save)
-- Added CLI for easy autonomous runs, userscript generation, metrics
-- Bumped to v0.3.0 with full packaging (console script `singularity`)
-- Enhanced orchestration with Groq calls, better swarm/metrics
-- Userscript generator now produces ready-to-use .user.js files
-- Browser automation hooks + GitHub auto-evolve ready
-- All compact, minified, zero-cost, maximum functionality
+## All Steps to Next Setpoint (v0.2.1) Implemented
+- Integrated compact **GroqClient** (auto-iter/PDCA, metrics, history, shared cache)
+- Added **BrowserAutomation** module (screen capture, input simulation, decision hooks — ready for userscript/remote desktop bridge)
+- Orchestrator enhanced to use GroqClient + BrowserAutomation in cycles
+- Swarm + userscript generator + full autonomous loops
+- Metrics everywhere, compact code, error resilience
+- GitHub seamless + CI auto-evolve ready
 
-## Quick Start (v0.3)
+## Quick Start (v0.2.1)
 ```bash
-git clone https://github.com/eric847b/singularity-operator.git
-cd singularity-operator
+git pull
 pip install -e .
-# GROQ_API_KEY=xxx
-singularity --help
-singularity --autonomous --interval 60
-singularity --userscript "full browser remote control + self-evolve userscript"
-```
-
-## Key Modules (v0.3)
-- **EverythingDB**: Universal sequences + Groq propose_unknown + L1/L2 cache
-- **SelfImprover**: Autonomous code evolution + background loops
-- **SingularityOrchestrator**: Swarm, orchestrated cycles, userscript gen
-- **GroqWrapper**: High-speed, self-iterating Groq client
-- **CLI**: `singularity` command for all operations
-
-## Run Full Autonomous
-```bash
-singularity --autonomous
-# Or Python:
-from singularity_operator import SingularityOrchestrator, GroqWrapper
+export GROQ_API_KEY=your_key
+python -m singularity_operator.orchestrator
+# Or full demo:
+from singularity_operator import SingularityOrchestrator, GroqClient, BrowserAutomation
 orch = SingularityOrchestrator()
-gw = GroqWrapper()
-orch.start_full_autonomous()
-print(gw.call("Next perfection iteration for Singularity Operator"))
+gc = GroqClient()
+ba = BrowserAutomation()
+print(orch.start_full_autonomous())
+print(gc.call("Propose next evolution for browser automation integration"))
+print(ba.capture_screen("Singularity dashboard"))
 ```
 
-**Setpoint Achieved**: Complete autonomous ecosystem. Every prompt improves it. For Eric + humanity. Iterate to perfection.
+## Modules
+- EverythingDB, SelfImprover, Orchestrator (core v0.2)
+- **GroqClient**: High-speed inference + self-refinement loops
+- **BrowserAutomation**: Remote control hooks for userscripts + decision-making
 
-MIT License
+Iterate to perfection. All real work done for Eric's goals + others.
+
+License: MIT
