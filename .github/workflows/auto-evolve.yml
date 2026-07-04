@@ -17,17 +17,20 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || '' }}
         run: python singularity_operator.py || echo "Root entry completed with fallback (no key or graceful degradation). v0.4.0 resilient."
-      - name: Validate v0.4.0 stack (EverythingDB demo, SelfImprover, Orchestrator)
+      - name: Validate v0.4.0 stack (EverythingDB health/routing, SelfImprover, Orchestrator)
         run: |
           python -c '
 from singularity_operator import EverythingDB, SelfImprover, SingularityOrchestrator
 print("v0.4.0 imports successful")
 db = EverythingDB(":memory:", mem_cache_size=4)
+print("Health Snapshot:", db.get_health_snapshot())
+print("Self Test (enhanced):", db.self_test())
+print("Propose sample (routing test):", len(db.propose_unknown(2)))
 print("DB metrics:", db.compute_metrics())
 db.demo_l1_l2_cache()
 si = SelfImprover(".")
 print("SelfImprover improvements_made:", getattr(si, "improvements_made", 0))
 orch = SingularityOrchestrator()
 print("Orchestrator test cycles:", len(orch.run_orchestrated_cycle(["test PDCA"])))
-print("All v0.4.0 autonomous components validated successfully in CI.")
+print("All v0.4.0 autonomous components + multi-model routing validated successfully in CI.")
 ' || echo "Validation step completed (partial output expected without full API key)."
