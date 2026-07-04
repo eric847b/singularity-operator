@@ -2,13 +2,30 @@
 """singularity_operator.py - Root entry point / quick demo for Singularity Operator v0.4.0+.
 
 Resilient to missing optional deps. Demonstrates core stack and autonomous evolution intent.
+Supports --test flag for self_test() validation.
 Run directly or via CI auto-evolve workflow.
 """
 
 import os
 import sys
+import argparse
+
+parser = argparse.ArgumentParser(description="Singularity Operator v0.4.0 Root Entry")
+parser.add_argument("--test", action="store_true", help="Run EverythingDB self_test() and exit")
+args = parser.parse_args()
 
 print("Singularity Operator v0.4.0 root entry - resilient autonomous demo")
+
+if args.test:
+    try:
+        from singularity_operator import EverythingDB
+        db = EverythingDB(":memory:")
+        result = db.self_test()
+        print("Self Test Result:", result)
+        sys.exit(0 if result.get("test_passed") else 1)
+    except Exception as e:
+        print(f"Self test failed: {e}")
+        sys.exit(1)
 
 try:
     from groq_singularity import SingularityGroq
