@@ -1,46 +1,45 @@
 **Singularity Operator v0.4.0**  
-The ultimate comprehensive self-improving AI system — EverythingDB + SelfImprover + full orchestration stack. Autonomous knowledge completion, safe code self-evolution, multi-AI collaboration, browser automation, GitHub seamless ops, advanced userscript generation. Built for perfection as fast as possible.
+The ultimate comprehensive self-improving AI system — EverythingDB + SelfImprover + full orchestration stack with advanced observability.
 
 **Current Status**  
 All core setpoints live and upgraded in v0.4.0:
-- **EverythingDB**: Groq-powered novel sequence proposals with retry+backoff, difflib similarity search for better retrieval, explicit `demo_l1_l2_cache()` demonstrating transistor/latch (L1 promotion/eviction/hit) model, metrics persistence across sessions, configurable model/tokens. Zero-cost robustness for long autonomous runs.
-- **SelfImprover**: Now performs *real targeted code edits* via parseable >>>OLD/>>>NEW markers from LLM, with full PDCA (Plan via propose, Do via apply, Check via ast.parse syntax validation, Act via auto-rollback on failure). Tracks `improvements_made`. Safer, more powerful autonomous self-coding loops.
-- Everything else (Orchestrator, GroqClient, BrowserAutomation, GitHubSeamless, UserscriptGenerator) fully integrated and compact.
+- **EverythingDB**: Groq-powered novel sequence proposals with retry+backoff, difflib similarity search, explicit `demo_l1_l2_cache()`, `get_health_snapshot()`, and new `self_test()` for autonomous validation. Metrics persistence and configurable Groq params.
+- **SelfImprover**: Real targeted code edits via parseable markers, full PDCA with syntax rollback, `improvements_made` tracking, and now health-aware `self_discover()` using `get_health_snapshot()` from shared DB.
+- **Orchestrator**: Persistent metrics sync, health snapshots included in every cycle result, lightweight PDCA goal refinement.
+- **Root Entry + CLI**: `singularity_operator.py` now supports `--test` flag that runs `EverythingDB.self_test()`. Resilient to missing optional deps.
+- Everything else (GitHubSeamless, UserscriptGenerator, BrowserAutomation) fully integrated.
 
 **How to Run / Quickstart**  
 ```bash
 git pull
 git checkout main
 pip install -e .
+
+# Quick health + self-validation
+python singularity_operator.py --test
+
+# Full stack validation
 python -c '
 from singularity_operator import EverythingDB, SelfImprover, SingularityOrchestrator
-print("v0.4.0 live - all upgrades active!")
+print("v0.4.0 imports OK")
 db = EverythingDB(":memory:")
-print(db.compute_metrics())
-print(db.demo_l1_l2_cache())
-'
-python -c '
-from singularity_operator import SelfImprover
-si = SelfImprover(".")
-print(si.run_cycle())
-print("Improvements made:", si.improvements_made)
+print(db.get_health_snapshot())
+print(db.self_test())
 '
 ```
 
+**New in v0.4.0 — Major Catalyst Features**
+- `get_health_snapshot()`: Combined metrics, cache state, config, and health status for autonomous monitoring and PDCA.
+- `self_test()`: Self-contained validation that exercises health, proposal, and expansion.
+- `--test` CLI flag on root entry for instant self-validation.
+- Health-aware decision making in SelfImprover.
+- Health snapshots surfaced in Orchestrator cycles.
+
 **Goals**  
-Create the end-all-be-all self-improving AI: universal sequence completion (EverythingDB), autonomous safe code evolution (SelfImprover), full stack autonomy. Reach perfection fast for user (Eric) then others. PDCA + highest-ROI catalyst actions every iteration. Connectors (GitHub, Notion) enabled.
+Create the end-all-be-all self-improving AI with full autonomy, universal sequence completion, safe code evolution, and now strong self-observability. Reach perfection fast for the user first, then others. PDCA + highest-ROI catalyst actions every iteration.
 
-**v0.4.0 Changes (Highest ROI Catalyst Upgrades)**  
-- EverythingDB: retry logic, better search, cache demo, persist metrics — more reliable self-expand and knowledge fabric.
-- SelfImprover: real edits + PDCA safety — transforms from comment appender to actual self-coder without breaking runs.
-- Version bump, docs, package metadata updated.
-- All changes compact, stdlib-only where possible, backward compatible, runnable demos.
-
-**Next Evolution Recommendations (prompt me with these for max progress)**  
-1. Run full self_expand + demo_cache on EverythingDB and report new sequences + metrics delta.
-2. Trigger SelfImprover autonomous_loop or run_cycle on specific modules (e.g. orchestrator.py) and verify PDCA rollbacks work.
-3. Integrate EverythingDB sequences into browser_automation or userscript_gen for real-world harvesting.
-4. Use GitHubSeamless to create issue/PR summarizing v0.4.0 upgrades and open Notion task for next catalyst (e.g. multi-model support or embedding similarity).
+**Next Evolution Recommendations**  
+See the Singularity Operator Tasks Notion DB for the current prioritized list (including self-validation, multi-model support, deeper browser integration, and full autonomous end-to-end demos).
 
 **License**  
 MIT  
