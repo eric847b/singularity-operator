@@ -6,7 +6,7 @@ Can run independently (needs no one). Shares cache with EverythingDB when provid
 
 Mental model: Self-improver = reconfigurable logic array that flips and rewires transistors (code atoms) in the codebase autonomously.
 
-v0.4.0: Real targeted code edits (parseable OLD->NEW markers), PDCA syntax verification + auto-rollback on failure, improvements_made tracking, health-aware discovery, health logging in autonomous_loop, and now adaptive behavior based on health status. Zero-cost upgrade to actual self-coding capability with observability.
+v0.4.0: Real targeted code edits (parseable OLD->NEW markers), PDCA syntax verification + auto-rollback on failure, improvements_made tracking, health-aware discovery, health logging in autonomous_loop, adaptive expansion, and now uses overall_health_score for smarter balancing between code improvement and knowledge expansion. Zero-cost upgrade to actual self-coding capability with observability.
 """
 
 import os
@@ -238,20 +238,23 @@ Otherwise just give the suggestion text."""
             if max_cycles and cycle >= max_cycles:
                 break
             try:
-                # Health logging and adaptive behavior
                 health = None
                 if self._shared_db and hasattr(self._shared_db, 'get_health_snapshot'):
                     try:
                         health = self._shared_db.get_health_snapshot()
-                        self.log.append(f"Cycle {cycle} health: {health.get('status')} | sequences: {health['metrics']['total_sequences']} | potential: {health['metrics']['expansion_potential']}")
+                        score = health.get('overall_health_score', 50)
+                        self.log.append(f"Cycle {cycle} health: {health.get('status')} | score: {score} | sequences: {health['metrics']['total_sequences']} | potential: {health['metrics']['expansion_potential']}")
 
-                        # Adaptive behavior: if needs expansion, trigger more proposals via shared DB if possible
-                        if health.get('status') == 'needs_expansion' and hasattr(self._shared_db, 'self_expand'):
+                        # Adaptive behavior based on overall_health_score
+                        if score < 40 and hasattr(self._shared_db, 'self_expand'):
                             try:
-                                added = self._shared_db.self_expand(2)
-                                self.log.append(f"Adaptive: triggered self_expand, added {added} sequences")
+                                added = self._shared_db.self_expand(3)  # more aggressive expansion if health low
+                                self.log.append(f"Adaptive: low health score ({score}), triggered aggressive self_expand, added {added} sequences")
                             except:
                                 pass
+                        elif score > 70:
+                            # If healthy, focus more on code improvements
+                            self.log.append("Adaptive: high health score, prioritizing code improvements")
                     except:
                         pass
 
@@ -271,7 +274,7 @@ Otherwise just give the suggestion text."""
             return "Already running"
         self._thread = threading.Thread(target=self.autonomous_loop, args=(interval,), daemon=True)
         self._thread.start()
-        return "Autonomous mode started (needs no one) - v0.4.0 PDCA + health logging + adaptive expansion"
+        return "Autonomous mode started (needs no one) - v0.4.0 PDCA + health logging + score-based adaptive expansion"
 
     def stop_autonomous(self):
         self._running = False
