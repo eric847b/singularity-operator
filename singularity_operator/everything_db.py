@@ -313,6 +313,25 @@ Return ONLY valid JSON (no markdown, no extra text):
             "version": __version__
         }
 
+    def get_health_snapshot(self) -> Dict[str, Any]:
+        """High-ROI observability method: combined health + metrics snapshot for autonomous monitoring and PDCA."""
+        metrics = self.compute_metrics()
+        cache_info = {
+            "l1_size": len(self._mem_cache),
+            "l1_capacity": self._mem_cache_size,
+            "recent_hits": self.cache_hits
+        }
+        return {
+            "version": __version__,
+            "metrics": metrics,
+            "cache": cache_info,
+            "groq_config": {
+                "model": self.groq_model,
+                "max_tokens": self.groq_max_tokens
+            },
+            "status": "healthy" if metrics["expansion_potential"] > 0.5 else "needs_expansion"
+        }
+
     def demo_l1_l2_cache(self) -> Dict[str, Any]:
         """Demonstrates L1 (fast in-memory latch/OrderedDict with LRU promotion) + L2 (persistent) + eviction behavior exactly as transistor/SRAM mental model."""
         results = {"l1_hits": 0, "l2_promotions": 0, "evictions": 0, "final_l1_size": 0}
@@ -346,6 +365,7 @@ if __name__ == "__main__":
     db.add_sequence(["All", "things", "knowable", "are", "in", "the", "database"], {"type": "premise"})
     db.add_sequence("Everything is in there.", {"type": "core_truth"})
     print("Metrics:", db.compute_metrics())
+    print("Health Snapshot:", db.get_health_snapshot())
     print("Proposed:", db.propose_unknown(2))
     print("Expanded:", db.self_expand(2))
     print("Final Metrics:", db.compute_metrics())
