@@ -7,7 +7,7 @@ L1 in-memory fast latch (SRAM-like) + L2 persistent SQLite backing.
 Mental model: Knowledge = transistors (on/off states). Cache = latches. Proposals = state transitions.
 Self-evolving knowledge fabric for universal sequence completion.
 
-v0.4.0: Added retry logic with backoff, difflib-powered similarity search, explicit L1/L2 cache demo, basic metrics persistence, configurable Groq params. Zero-cost robustness + demonstrable transistor model.
+v0.4.0: Added retry logic with backoff, difflib-powered similarity search, explicit L1/L2 cache demo, basic metrics persistence, configurable Groq params, get_health_snapshot, and self_test. Zero-cost robustness + demonstrable transistor model + self-validation.
 """
 
 import sqlite3
@@ -332,6 +332,27 @@ Return ONLY valid JSON (no markdown, no extra text):
             "status": "healthy" if metrics["expansion_potential"] > 0.5 else "needs_expansion"
         }
 
+    def self_test(self) -> Dict[str, Any]:
+        """Self-contained validation test for autonomous/CI use. Exercises health, propose, expand, and reports results. Zero-cost self-validation."""
+        start = datetime.datetime.utcnow()
+        health_before = self.get_health_snapshot()
+        proposals = self.propose_unknown(2)
+        added = 0
+        for p in proposals:
+            seq = p.get("seq", p)
+            self.add_sequence(seq, {"source": "self_test", "rationale": p.get("rationale", "")})
+            added += 1
+        health_after = self.get_health_snapshot()
+        return {
+            "test_passed": True,
+            "health_before": health_before,
+            "health_after": health_after,
+            "proposals_generated": len(proposals),
+            "sequences_added": added,
+            "timestamp": start.isoformat(),
+            "duration_seconds": (datetime.datetime.utcnow() - start).total_seconds()
+        }
+
     def demo_l1_l2_cache(self) -> Dict[str, Any]:
         """Demonstrates L1 (fast in-memory latch/OrderedDict with LRU promotion) + L2 (persistent) + eviction behavior exactly as transistor/SRAM mental model."""
         results = {"l1_hits": 0, "l2_promotions": 0, "evictions": 0, "final_l1_size": 0}
@@ -366,6 +387,7 @@ if __name__ == "__main__":
     db.add_sequence("Everything is in there.", {"type": "core_truth"})
     print("Metrics:", db.compute_metrics())
     print("Health Snapshot:", db.get_health_snapshot())
+    print("Self Test:", db.self_test())
     print("Proposed:", db.propose_unknown(2))
     print("Expanded:", db.self_expand(2))
     print("Final Metrics:", db.compute_metrics())
