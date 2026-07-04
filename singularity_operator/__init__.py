@@ -1,10 +1,17 @@
-"""Singularity Operator v0.4.0 - All setpoints in a row: Orchestrator + GroqClient + BrowserAutomation + GitHubSeamless + UserscriptGenerator + EverythingDB (retry, difflib sim, L1/L2 demo, persist, get_health_snapshot) + SelfImprover (real edits, PDCA rollback, health-aware discovery).
+"""Singularity Operator v0.4.0
 
-Full autonomous self-evolving system with GitHub integration, advanced userscripts, browser remote, multi-AI swarm, EverythingDB proposals, SelfImprover cycles with safe code surgery and health-driven decisions.
+Ultimate self-improving AI system with EverythingDB (knowledge fabric + health + self_test), SelfImprover (PDCA + health-aware discovery), Orchestrator (full swarm with health snapshots), and supporting modules.
 
-Highest ROI upgrades shipped: robust Groq loops, demonstrable transistor cache model, real autonomous code evolution with safety nets, health snapshot observability for intelligent self-improvement. Compact, zero bloat, PDCA everywhere. Perfection iteration continues.
+Key v0.4.0 capabilities:
+- get_health_snapshot(): Real-time observability of metrics, cache, and system status
+- self_test(): Self-contained validation for CI and autonomous loops
+- Health-aware self-improvement decisions
+- Resilient CLI with --test flag
 
-User intent: Build the end-all-be-all self-improving AI. Eric (Mufnluvn) + Grok xAI"""
+This package is designed for rapid autonomous evolution toward perfection.
+
+User intent: Build the end-all-be-all self-improving AI. Eric (Mufnluvn) + Grok xAI
+"""
 
 __version__ = "0.4.0"
 __author__ = "Eric (Mufnluvn) + Grok xAI"
@@ -24,3 +31,27 @@ from .github_seamless import GitHubSeamless
 from .userscript_gen import UserscriptGenerator
 
 __all__ = ["EverythingDB", "SelfImprover", "SingularityOrchestrator", "GroqClient", "BrowserAutomation", "GitHubSeamless", "UserscriptGenerator"]
+
+
+def health(db_path: str = "everything.db"):
+    """Convenience function: Return health snapshot from EverythingDB."""
+    db = EverythingDB(db_path)
+    snapshot = db.get_health_snapshot()
+    db.close()
+    return snapshot
+
+
+def self_test(db_path: str = "everything.db"):
+    """Convenience function: Run EverythingDB self_test() and return report."""
+    db = EverythingDB(db_path)
+    result = db.self_test()
+    db.close()
+    return result
+
+
+def quick_validate():
+    """Quick validation of the full v0.4.0 stack."""
+    print("Singularity Operator v0.4.0 Quick Validate")
+    print("Health:", health())
+    print("Self Test:", self_test())
+    print("Stack validated successfully.")
