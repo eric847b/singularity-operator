@@ -26,9 +26,7 @@ try:
     from singularity_operator import EverythingDB, SelfImprover, SingularityOrchestrator
     print("\nv0.4.0 package imports: OK")
     db = EverythingDB(":memory:", mem_cache_size=4)
-    m = db.compute_metrics()
-    print("EverythingDB metrics sample:", {k: m[k] for k in ['total_sequences', 'llm_calls', 'estimated_coverage'] if k in m})
-    db.demo_l1_l2_cache()
+    print("Health Snapshot:", db.get_health_snapshot())
     si = SelfImprover(".")
     print("SelfImprover improvements_made:", getattr(si, 'improvements_made', 0))
     orch = SingularityOrchestrator()
