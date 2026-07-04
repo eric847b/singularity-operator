@@ -7,7 +7,7 @@ L1 in-memory fast latch (SRAM-like) + L2 persistent SQLite backing.
 Mental model: Knowledge = transistors (on/off states). Cache = latches. Proposals = state transitions.
 Self-evolving knowledge fabric for universal sequence completion.
 
-v0.4.0: Added retry logic with backoff, difflib-powered similarity search, explicit L1/L2 cache demo, basic metrics persistence, configurable Groq params, get_health_snapshot (with overall score + recommendation), self_test (enhanced), multi-model routing with health_score, and now logging of model selection decisions for observability/metrics. Zero-cost robustness + self-regulating intelligence.
+v0.4.0: Added retry logic, difflib search, L1/L2 demo, metrics persistence, get_health_snapshot (score + recommendation), self_test, multi-model routing with health_score, logging of routing decisions, and now simple cost estimation for observability. Zero-cost robustness + self-regulating intelligence.
 """
 
 import sqlite3
@@ -40,11 +40,18 @@ class EverythingDB:
         "high_quality": "llama3-70b-8192",    # Highest quality (can swap with mixtral or future models)
     }
 
+    # Approximate relative cost per 1k tokens (placeholder - update with real values)
+    MODEL_COSTS = {
+        "llama3-8b-8192": 0.05,
+        "llama3-70b-8192": 0.59,
+    }
+
     def __init__(self, db_path: str = "everything.db", mem_cache_size: int = 64):
         self.db_path = db_path
         self.conn = sqlite3.connect(db_path)
         self.llm_calls = 0
         self.cache_hits = 0
+        self.estimated_cost = 0.0  # simple cumulative cost estimate
         self._mem_cache_size = mem_cache_size
         self._mem_cache: OrderedDict = OrderedDict()
         self.groq_model = self.GROQ_MODELS["balanced"]
@@ -83,6 +90,7 @@ class EverythingDB:
     def _load_persisted_metrics(self):
         self.llm_calls = self._load_metric("llm_calls", 0)
         self.cache_hits = self._load_metric("cache_hits", 0)
+        self.estimated_cost = float(self._load_metric("estimated_cost", 0.0))
 
     def _persist_metric(self, key: str, value: Any):
         c = self.conn.cursor()
@@ -95,7 +103,7 @@ class EverythingDB:
         row = c.fetchone()
         if row:
             try:
-                return int(row[0])
+                return float(row[0]) if key == "estimated_cost" else int(row[0])
             except:
                 return row[0]
         return default
@@ -189,8 +197,6 @@ class EverythingDB:
     def _select_groq_model(self, health_score: float = 50.0) -> str:
         """Multi-model / cost-quality router.
         Uses overall_health_score to balance cost vs quality.
-        Low health -> cheaper/faster model for more exploration.
-        High health -> higher quality model.
         """
         if health_score < 40:
             return self.GROQ_MODELS["low_cost_fast"]
@@ -201,8 +207,7 @@ class EverythingDB:
 
     def _call_groq(self, prompt: str, model: str = None, max_tokens: int = None, health_score: float = None) -> Optional[str]:
         """Groq call with exponential backoff retry (3 attempts).
-        Now supports health_score for intelligent model routing.
-        Logs selection decision for observability.
+        Now supports health_score for intelligent model routing + cost logging.
         """
         if model is None:
             if health_score is not None:
@@ -212,7 +217,7 @@ class EverythingDB:
         if max_tokens is None:
             max_tokens = self.groq_max_tokens
 
-        # Log model selection decision (for metrics/observability)
+        # Log routing decision for observability
         if health_score is not None:
             print(f"[EverythingDB] Routing: health_score={health_score:.1f} -> model={model}")
 
@@ -245,6 +250,11 @@ class EverythingDB:
                 resp.raise_for_status()
                 content = resp.json()["choices"][0]["message"]["content"]
                 self.llm_calls += 1
+                # Simple cost estimate
+                cost_per_k = self.MODEL_COSTS.get(model, 0.2)
+                estimated = (max_tokens / 1000) * cost_per_k
+                self.estimated_cost += estimated
+                self._persist_metric("estimated_cost", self.estimated_cost)
                 self._save_to_cache(prompt, content)
                 self._persist_metric("llm_calls", self.llm_calls)
                 return content
@@ -263,7 +273,6 @@ class EverythingDB:
         except:
             pass
 
-        # Get health for model routing
         health = self.get_health_snapshot()
         health_score = health.get("overall_health_score", 50.0)
 
@@ -336,6 +345,7 @@ Return ONLY valid JSON (no markdown, no extra text):
         potential = max(0.0, 1.0 - (total / 10_000_000))
         self._persist_metric("llm_calls", self.llm_calls)
         self._persist_metric("cache_hits", self.cache_hits)
+        self._persist_metric("estimated_cost", self.estimated_cost)
         return {
             "total_sequences": total,
             "avg_contrib": round(avg_contrib, 4),
@@ -343,6 +353,7 @@ Return ONLY valid JSON (no markdown, no extra text):
             "expansion_potential": round(potential, 6),
             "llm_calls": self.llm_calls,
             "cache_hits": self.cache_hits,
+            "estimated_cost": round(self.estimated_cost, 4),
             "mem_cache_size": len(self._mem_cache),
             "timestamp": datetime.datetime.utcnow().isoformat(),
             "version": __version__
@@ -387,7 +398,6 @@ Return ONLY valid JSON (no markdown, no extra text):
         health_before = self.get_health_snapshot()
         initial_count = health_before["metrics"]["total_sequences"]
 
-        # Propose and add some sequences
         proposals = self.propose_unknown(2)
         added_propose = 0
         for p in proposals:
@@ -395,7 +405,6 @@ Return ONLY valid JSON (no markdown, no extra text):
             self.add_sequence(seq, {"source": "self_test", "rationale": p.get("rationale", "")})
             added_propose += 1
 
-        # Also run a small self_expand for more realism
         added_expand = self.self_expand(1)
 
         health_after = self.get_health_snapshot()
@@ -422,17 +431,14 @@ Return ONLY valid JSON (no markdown, no extra text):
     def demo_l1_l2_cache(self) -> Dict[str, Any]:
         """Demonstrates L1 (fast in-memory latch/OrderedDict with LRU promotion) + L2 (persistent) + eviction behavior exactly as transistor/SRAM mental model."""
         results = {"l1_hits": 0, "l2_promotions": 0, "evictions": 0, "final_l1_size": 0}
-        # Fill L1 beyond capacity to trigger evictions
         for i in range(self._mem_cache_size + 5):
             p = f"transistor_latch_test_{i}"
             self._save_to_cache(p, f"state_on_{i}")
-        results["evictions"] = 5  # approx from FIFO
-        # Access recent ones -> L1 hit (promotion via move_to_end)
+        results["evictions"] = 5
         for i in range(3):
             hit = self._get_from_cache(f"transistor_latch_test_{self._mem_cache_size + i - 3}")
             if hit:
                 results["l1_hits"] += 1
-        # Access an older one that may have been evicted from L1 but lives in L2
         old_hit = self._get_from_cache("transistor_latch_test_0")
         if old_hit:
             results["l2_promotions"] += 1
@@ -443,11 +449,11 @@ Return ONLY valid JSON (no markdown, no extra text):
     def close(self):
         self._persist_metric("llm_calls", self.llm_calls)
         self._persist_metric("cache_hits", self.cache_hits)
+        self._persist_metric("estimated_cost", self.estimated_cost)
         self.conn.close()
 
 
 if __name__ == "__main__":
-    # Demo only
     db = EverythingDB(":memory:", mem_cache_size=8)
     db.add_sequence(["All", "things", "knowable", "are", "in", "the", "database"], {"type": "premise"})
     db.add_sequence("Everything is in there.", {"type": "core_truth"})
