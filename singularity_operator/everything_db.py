@@ -7,7 +7,7 @@ L1 in-memory fast latch (SRAM-like) + L2 persistent SQLite backing.
 Mental model: Knowledge = transistors (on/off states). Cache = latches. Proposals = state transitions.
 Self-evolving knowledge fabric for universal sequence completion.
 
-v0.4.0: Added retry logic with backoff, difflib-powered similarity search, explicit L1/L2 cache demo, basic metrics persistence, configurable Groq params, get_health_snapshot, self_test (enhanced with expand), and health delta reporting. Zero-cost robustness + demonstrable transistor model + self-validation.
+v0.4.0: Added retry logic with backoff, difflib-powered similarity search, explicit L1/L2 cache demo, basic metrics persistence, configurable Groq params, get_health_snapshot (with overall score), self_test (enhanced with expand and deltas), and health delta reporting. Zero-cost robustness + demonstrable transistor model + self-validation.
 """
 
 import sqlite3
@@ -314,13 +314,26 @@ Return ONLY valid JSON (no markdown, no extra text):
         }
 
     def get_health_snapshot(self) -> Dict[str, Any]:
-        """High-ROI observability method: combined health + metrics snapshot for autonomous monitoring and PDCA."""
+        """High-ROI observability method: combined health + metrics snapshot for autonomous monitoring and PDCA. Includes simple overall health score."""
         metrics = self.compute_metrics()
         cache_info = {
             "l1_size": len(self._mem_cache),
             "l1_capacity": self._mem_cache_size,
             "recent_hits": self.cache_hits
         }
+
+        # Simple overall health score (0-100)
+        expansion = metrics["expansion_potential"]
+        coverage = metrics["estimated_coverage"]
+        activity = min(1.0, metrics["llm_calls"] / 100.0)  # normalize activity
+        overall_score = round((expansion * 40 + coverage * 40 + activity * 20), 1)
+
+        status = "healthy"
+        if expansion > 0.7:
+            status = "needs_expansion"
+        elif coverage < 0.1:
+            status = "early_stage"
+
         return {
             "version": __version__,
             "metrics": metrics,
@@ -329,7 +342,9 @@ Return ONLY valid JSON (no markdown, no extra text):
                 "model": self.groq_model,
                 "max_tokens": self.groq_max_tokens
             },
-            "status": "healthy" if metrics["expansion_potential"] > 0.5 else "needs_expansion"
+            "overall_health_score": overall_score,
+            "status": status,
+            "recommendation": "Expand knowledge" if expansion > 0.6 else "Continue improving code and observability"
         }
 
     def self_test(self) -> Dict[str, Any]:
