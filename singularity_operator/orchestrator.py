@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """SingularityOrchestrator - Master coordinator for EverythingDB + SelfImprover + Groq swarm.
 
-v0.4.0: Integrated persistent metrics sync from EverythingDB, optional L1/L2 cache demo visibility, lightweight PDCA goal refinement in cycles. Ties all v0.4.0 catalyst upgrades into full autonomous orchestration for faster perfection tracking.
+v0.4.0: Integrated persistent metrics sync from EverythingDB, optional L1/L2 cache demo visibility, lightweight PDCA goal refinement in cycles, and health snapshot integration. Ties all v0.4.0 catalyst upgrades into full autonomous orchestration for faster perfection tracking.
 
-Mental model: Orchestrator flips transistors across modules for global self-improvement and observable continuous evolution."""
+Mental model: Orchestrator flips transistors across modules for global self-improvement and observable continuous evolution. Now uses health data for smarter cycle behavior."""
 
 import os
 import json
@@ -20,7 +20,7 @@ except ImportError:
 
 
 class SingularityOrchestrator:
-    """Master node for Singularity Operator v0.4.0+ with persistent metrics + PDCA."""
+    """Master node for Singularity Operator v0.4.0+ with persistent metrics, health awareness, and PDCA."""
 
     def __init__(self, db_path: str = "everything.db", root_path: str = "."):
         self.db = EverythingDB(db_path)
@@ -45,6 +45,16 @@ class SingularityOrchestrator:
         results = []
         improvements_before = self.improver.improvements_made
         proposals_before = self.metrics["proposals"]
+
+        # New: Check health at start of cycle for smarter behavior
+        try:
+            health = self.db.get_health_snapshot()
+            if health.get("status") == "needs_expansion":
+                # Prioritize knowledge expansion when health indicates need
+                goals = ["self_expand knowledge gaps", "improve sequence quality"] + goals[:2]
+        except:
+            pass
+
         for goal in goals:
             # Use SelfImprover for code (now with PDCA safety)
             imp = self.improver.propose_improvement("singularity_operator/self_improver.py", goal)
@@ -61,6 +71,7 @@ class SingularityOrchestrator:
             results.append({"goal": goal, "improvement": imp.get("suggestion", ""), "proposals": len(proposals)})
         self.metrics["cycles"] += 1
         self.metrics["llm_calls"] = self.db.llm_calls  # sync latest
+
         # Lightweight PDCA: if no improvement in this cycle, trigger cache demo + refine
         if self.improver.improvements_made == improvements_before and self.metrics["proposals"] == proposals_before:
             try:
@@ -69,18 +80,21 @@ class SingularityOrchestrator:
                 pass
             # Simple goal refinement for next cycle
             goals = ["self_expand knowledge gaps", "robust error handling", "metrics observability"]
+
         # Persist orchestrator metrics snapshot (via db meta for continuity)
         try:
             self.db._persist_metric("orchestrator_cycles", self.metrics["cycles"])
             self.db._persist_metric("orchestrator_improvements", self.metrics["improvements"])
         except:
             pass
-        # New: Include health snapshot in results for observability
+
+        # Include health snapshot in results for observability
         try:
             health = self.db.get_health_snapshot()
             results.append({"health_snapshot": health})
         except:
             pass
+
         print(f"Orchestrated cycle complete. Metrics: {self.metrics}")
         return results
 
@@ -104,7 +118,7 @@ console.log('Singularity Operator userscript active - Groq powered, autonomous e
         self._running = True
         t = threading.Thread(target=loop, daemon=True)
         t.start()
-        return "Full autonomous orchestration started (v0.4.0 - persistent metrics + PDCA)"
+        return "Full autonomous orchestration started (v0.4.0 - health-aware + persistent metrics + PDCA)"
 
     def stop(self):
         self._running = False
