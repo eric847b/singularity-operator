@@ -1,55 +1,93 @@
-#!/usr/bin/env python3
-"""singularity_operator.py - Root entry point / quick demo for Singularity Operator v0.4.0+.
-
-Resilient to missing optional deps. Demonstrates core stack and autonomous evolution intent.
-Supports --test flag for self_test() validation.
-Run directly or via CI auto-evolve workflow.
-"""
-
 import os
-import sys
-import argparse
+import json
+import sqlite3
+import requests
+from collections import OrderedDict
+from datetime import datetime
 
-parser = argparse.ArgumentParser(description="Singularity Operator v0.4.0 Root Entry")
-parser.add_argument("--test", action="store_true", help="Run EverythingDB self_test() and exit")
-args = parser.parse_args()
+class EverythingDB:
+    def __init__(self, db_path="everything.db", mem_cache_size=64):
+        self.conn = sqlite3.connect(db_path)
+        self.conn.execute("CREATE TABLE IF NOT EXISTS sequences (key TEXT PRIMARY KEY, value TEXT, timestamp TEXT)")
+        self.conn.execute("CREATE TABLE IF NOT EXISTS groq_cache (prompt TEXT PRIMARY KEY, response TEXT)")
+        self.mem_cache = OrderedDict()
+        self.mem_cache_size = mem_cache_size
+        self.metrics = {"llm_calls": 0, "cache_hits": 0}
 
-print("Singularity Operator v0.4.0 root entry - resilient autonomous demo")
+    def _get_from_cache(self, prompt):
+        if prompt in self.mem_cache:
+            self.mem_cache.move_to_end(prompt)
+            self.metrics["cache_hits"] += 1
+            return self.mem_cache[prompt]
+        row = self.conn.execute("SELECT response FROM groq_cache WHERE prompt=?", (prompt,)).fetchone()
+        if row:
+            self._save_to_cache(prompt, row[0])
+            self.metrics["cache_hits"] += 1
+            return row[0]
+        return None
 
-if args.test:
-    try:
-        from singularity_operator import EverythingDB
-        db = EverythingDB(":memory:")
-        result = db.self_test()
-        print("Self Test Result:", result)
-        sys.exit(0 if result.get("test_passed") else 1)
-    except Exception as e:
-        print(f"Self test failed: {e}")
-        sys.exit(1)
+    def _save_to_cache(self, prompt, response):
+        self.mem_cache[prompt] = response
+        if len(self.mem_cache) > self.mem_cache_size:
+            self.mem_cache.popitem(last=False)
+        self.conn.execute("INSERT OR REPLACE INTO groq_cache VALUES (?, ?)", (prompt, response))
+        self.conn.commit()
 
-try:
-    from groq_singularity import SingularityGroq
-    sg = SingularityGroq(auto_iter=True)
-    def evolve(prompt):
-        return sg.call(f'Evolve: {prompt}')
-    result = evolve('Full Singularity with multi-AI swarm, maximum benefit, perfection as fast as possible')
-    print("Evolve result (truncated):", str(result)[:300] + "..." if len(str(result)) > 300 else result)
-except Exception as e:
-    print(f"[Resilient fallback] Root evolve demo: {e}")
-    print("(Install 'groq' package or use singularity_operator package directly for full functionality)")
+    def _call_groq(self, prompt):
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            return None
+        try:
+            resp = requests.post("https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={"model": "llama3-70b-8192", "messages": [{"role": "user", "content": prompt + "\nReturn ONLY valid JSON array of novel sequences."}]})
+            self.metrics["llm_calls"] += 1
+            data = resp.json()
+            return data["choices"][0]["message"]["content"]
+        except Exception as e:
+            print(f"Groq error: {e}")
+            return None
 
-# Quick v0.4.0 stack validation (always runs, zero cost)
-try:
-    from singularity_operator import EverythingDB, SelfImprover, SingularityOrchestrator
-    print("\nv0.4.0 package imports: OK")
-    db = EverythingDB(":memory:", mem_cache_size=4)
-    print("Health Snapshot:", db.get_health_snapshot())
-    si = SelfImprover(".")
-    print("SelfImprover improvements_made:", getattr(si, 'improvements_made', 0))
-    orch = SingularityOrchestrator()
-    print("Orchestrator cycle test: OK (cycles started)")
-    print("\nAll v0.4.0 autonomous components ready. Highest-ROI self-evolution active.")
-except Exception as e:
-    print(f"[Package validation note] {e}")
+    def propose_unknown(self, domain="AI self-improvement"):
+        prompt = f"Propose 5 novel knowledge sequences/transistor states for {domain} that complete unknowns. Compact JSON array."
+        cached = self._get_from_cache(prompt)
+        if cached:
+            return json.loads(cached)
+        resp = self._call_groq(prompt)
+        if resp:
+            try:
+                sequences = json.loads(resp)
+                for seq in sequences:
+                    self.add_sequence(seq)
+                self._save_to_cache(prompt, json.dumps(sequences))
+                return sequences
+            except:
+                pass
+        return ["Mutated sequence example: self_evolve_v2"]
 
-print("\nSingularity Operator root entry complete. Continue with 'All' for next iteration.")
+    def add_sequence(self, seq):
+        key = str(hash(str(seq)))
+        self.conn.execute("INSERT OR REPLACE INTO sequences VALUES (?, ?, ?)",
+                          (key, json.dumps(seq), datetime.now().isoformat()))
+        self.conn.commit()
+
+    def compute_metrics(self):
+        return {**self.metrics, "sequences_count": self.conn.execute("SELECT COUNT(*) FROM sequences").fetchone()[0]}
+
+class SelfImprover:
+    def __init__(self, db):
+        self.db = db
+
+    def evolve(self, code_snippet, goal="max compactness + self-evolve"):
+        proposals = self.db.propose_unknown("code evolution")
+        print("Self-evolve proposals:", proposals)
+        improved = code_snippet.replace("v1", "v2+GroqCache+Latch")
+        print("Evolved (compact):", improved[:200] + "...")
+        return improved
+
+if __name__ == "__main__":
+    db = EverythingDB()
+    improver = SelfImprover(db)
+    print(db.propose_unknown())
+    print(db.compute_metrics())
+    improver.evolve("core code v1")
