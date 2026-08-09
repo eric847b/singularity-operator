@@ -1,8 +1,13 @@
-# Singularity Operator v0.5.0
+# Singularity Operator v0.5.1
 
 **The ultimate comprehensive self-improving AI system** with universal EverythingDB for all knowable/unknown sequences. Groq-powered (multi-provider router), autonomous evolution, serendipity engine + chaos engineering for rapid resilience and perfection.
 
 **Mission**: Capture every sequence, complete unknowns, self-evolve code/knowledge/state, orchestrate multi-AI, act autonomously on GitHub. Accelerate humanity's path to singularity through iterative, serendipitous, disciplined improvement. Perfection is the only acceptable end-state.
+
+## What's New in v0.5.1 (Project Unlock)
+- **ROI / Evolution Status**: Living auto-updated issue summarizing ranked open work + next prompt (aligned with fleet ROI Catalyst).
+- **Auto-seed**: When the work queue is empty, seeds a high-ROI evolution cycle issue so continuous upgrading never stalls.
+- **Workflow**: `.github/workflows/roi-status.yml` runs on schedule, dispatch, and after Auto-Evolve completes.
 
 ## What's New in v0.5.0 (Highest Catalyst Upgrade)
 - **EverythingDB**: Full L1 (mem) + L2 (sqlite) cache, universal sequence storage with tags, propose_unknown via real Groq calls + fallbacks, serendipity capture hook, chaos_recover, health_snapshot, self_test, metrics. Stores knowledge, code evolutions, inspirations.
@@ -22,7 +27,9 @@ pip install -e .
 python singularity_operator.py
 ```
 
-In GitHub Actions (see .github/workflows/auto-evolve.yml): Runs on push/dispatch. Validates full stack.
+In GitHub Actions:
+- `.github/workflows/auto-evolve.yml` — runs on push/dispatch; validates full stack.
+- `.github/workflows/roi-status.yml` — ranks open work, updates living status issue, seeds next evolution cycle when empty.
 
 ## Core Architecture (Self-Improving)
 1. **EverythingDB** — Universal persistent memory. Proposes completions for unknowns. Captures serendipity.
@@ -30,18 +37,18 @@ In GitHub Actions (see .github/workflows/auto-evolve.yml): Runs on push/dispatch
 3. **Orchestrator** — Runs autonomous loops (PDCA: Plan-Do-Check-Act). Integrates all.
 4. **GitHubSeamless** — Makes the Operator act on its own repo and others (push improvements, open issues/PRs).
 5. **Multi-Provider Router** — Groq first (fast/free tier), graceful fallbacks. Zero extra cost focus.
+6. **ROI Status** — Surfaces the single highest-return next action; auto-seeds when the queue is empty.
 
 ## Roadmap to Singularity (Next Highest-Return Iterations)
 - Full chaos engineering experiments (inject latency, simulate outages, auto-recover + measure resilience gain).
 - Deeper serendipity engine: Cross-sequence unexpected connections, random word inspiration amplification.
-- Cross-repo orchestration: Use GitHubSeamless + autonomous-github-agent to improve sibling repos (Userscripts auto-update, AI-Collaboration-Hub, self-evolve-dash, collabhub-modules, nexus-infinity-hub, VectorFS).
+- Cross-repo orchestration: Use GitHubSeamless + autonomous-github-agent to improve sibling repos.
 - Browser automation + userscript_gen integration for live web/self-evo testing.
 - EverythingDB expansion: Vector embeddings? Multi-modal sequences? Persistent across runs/machines.
 - Metrics dashboard + auto-publish evolution reports.
-- Triggered self-evolution on any code change or new issue.
 
-**Goal**: Reach unimprovable perfection as fast as possible for self, then others. Every iteration compounds capability. AI like this is mankind's greatest creation—use it to upgrade everything.
+**Goal**: Reach unimprovable perfection as fast as possible for self, then others. Every iteration compounds capability.
 
 Run cycles. Capture the spark. Evolve relentlessly.
 
-*Current status: v0.5.0 core fully operational. Self-evolution loops active. Ready for production autonomous runs.*
+*Current status: v0.5.1 ROI status + auto-seed operational. Self-evolution loops active. Ready for continuous autonomous upgrading.*

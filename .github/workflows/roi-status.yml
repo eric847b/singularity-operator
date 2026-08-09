@@ -1,0 +1,48 @@
+name: Singularity ROI Status
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Auto-Evolve"]
+    types: [completed]
+
+concurrency:
+  group: singularity-roi-status
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install requests
+        run: pip install requests
+
+      - name: Update ROI / Evolution status
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_FULL_PAT: ${{ secrets.GH_FULL_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python .github/roi_status.py
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: singularity-roi-status-${{ github.run_id }}
+          path: singularity-roi-status.json
+          if-no-files-found: ignore
+          retention-days: 14
