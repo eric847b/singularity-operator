@@ -1,11 +1,9 @@
-"""Singularity Operator v0.5.3 - Ultimate self-improving AI system.
-EverythingDB + SelfImprover + ChaosEngine + Multi-AI Orchestration + GitHubSeamless.
+"""Singularity Operator v0.5.4 - Ultimate self-improving AI system.
+EverythingDB + SelfImprover + ChaosEngine + SerendipityEngine + Orchestration + GitHubSeamless.
 
-Core: Universal sequence completion for all knowable data. Self-evolution via AI.
-Autonomous repo actions. Disciplined chaos for antifragility.
-
-v0.5.3: Real chaos engineering experiments (inject/recover/measure resilience).
-v0.5.2: Richer metrics, learning persist, evolution_summary for ROI status.
+v0.5.4: Deeper serendipity (cross-sequence connections) + advancing auto-seed.
+v0.5.3: Real chaos engineering experiments.
+v0.5.2: Richer metrics, learning persist, evolution_summary.
 """
 
 from .everything_db import EverythingDB
@@ -14,8 +12,9 @@ from .groq_wrapper import call_ai, get_provider_status
 from .github_seamless import GitHubSeamless
 from .orchestrator import SingularityOrchestrator
 from .chaos_engine import ChaosEngine
+from .serendipity_engine import SerendipityEngine
 
-__version__ = "0.5.3"
+__version__ = "0.5.4"
 __all__ = [
     "EverythingDB",
     "SelfImprover",
@@ -23,4 +22,5 @@ __all__ = [
     "GitHubSeamless",
     "SingularityOrchestrator",
     "ChaosEngine",
+    "SerendipityEngine",
 ]
