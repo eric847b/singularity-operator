@@ -1,55 +1,61 @@
-"""Singularity Operator v0.5.2 Launcher - Resilient entry point + full demo cycle.
+"""Singularity Operator v0.5.3 Launcher - Resilient entry + full demo cycle incl. chaos battery.
 
-Runs EverythingDB + SelfImprover + Orchestrator. Exercises self-evolution.
+Runs EverythingDB + SelfImprover + ChaosEngine + Orchestrator.
 Use in CI (auto-evolve.yml) or locally with GROQ_API_KEY for full power.
-
-Perfection acceleration: Every run proposes unknowns, evolves code, captures serendipity, tests chaos recovery.
-Emits one-line evolution_summary for continuous ROI surface.
 """
 
 import os
 from datetime import datetime
 
 from singularity_operator import (
-    EverythingDB, SelfImprover, call_ai, GitHubSeamless, SingularityOrchestrator
+    EverythingDB,
+    SelfImprover,
+    ChaosEngine,
+    call_ai,
+    GitHubSeamless,
+    SingularityOrchestrator,
 )
 
 
 def main():
-    print("=== Singularity Operator v0.5.2 ===")
+    print("=== Singularity Operator v0.5.3 ===")
     print(f"Time: {datetime.now().isoformat()}")
     print(f"Groq key present: {bool(os.getenv('GROQ_API_KEY'))}")
 
-    db = EverythingDB(":memory:", mem_cache_size=8)  # In-mem for CI/demo; use file for persistence
+    db = EverythingDB(":memory:", mem_cache_size=8)
     improver = SelfImprover(db=db)
+    chaos = ChaosEngine(db=db)
     orch = SingularityOrchestrator(db=db)
 
-    print("\n[1] Propose unknown sequences (EverythingDB + Groq router)...")
+    print("\n[1] Propose unknown sequences...")
     unknowns = db.propose_unknown("core self-improvement + singularity", 4)
     print("Proposed:", unknowns[:3])
 
     print("\n[2] Self-evolve sample code...")
     evolved = improver.evolve(
         "def core_v1(): return 'v1'  # TODO: self_improve",
-        goal="compact + metrics + resilience v0.5.2",
+        goal="compact + metrics + chaos-resilient v0.5.3",
     )
-    print("Evolved snippet preview:", evolved[:300] + "...")
+    print("Evolved snippet preview:", evolved[:280] + "...")
 
-    print("\n[3] Run orchestrated self-evolution cycle...")
+    print("\n[3] Chaos battery (3 experiments)...")
+    battery = chaos.run_battery(n=3)
+    for r in battery:
+        print(f"  {r['experiment']}: ok={r['ok']} gain={r['gain']} score={r['score_after']}")
+    print("  ", chaos.summary_line())
+
+    print("\n[4] Orchestrated cycle...")
     cycle_results = orch.run_orchestrated_cycle()
     print("Cycle results:", cycle_results)
 
-    print("\n[4] Health & metrics...")
+    print("\n[5] Health & metrics...")
     print("DB Health:", db.get_health_snapshot())
-    print("Improver report:", improver.get_improvement_report())
-    print("Orchestrator status:", orch.get_status())
-    print("Evolution summary (ROI):", orch.evolution_summary())
+    print("Improver:", improver.get_improvement_report())
+    print("Chaos:", chaos.get_report())
+    print("Orchestrator:", orch.get_status())
+    print("Summary line:", orch.evolution_summary())
 
-    # Persist metrics even in :memory: path for demo completeness
-    db.persist_metrics()
-
-    print("\n=== v0.5.2 Self-evolution cycle complete. System stronger. ===")
-    print("Next: Trigger more cycles, integrate with autonomous-github-agent, full chaos experiments.")
+    print("\n=== v0.5.3 cycle complete. Resilience measured. System stronger. ===")
 
 
 if __name__ == "__main__":
