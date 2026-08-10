@@ -1,8 +1,8 @@
-"""SingularityOrchestrator v0.5.8 - PDCA + chaos + serendipity + fleet + browser/userscript self-evo.
+"""SingularityOrchestrator v0.5.9 - PDCA + chaos + serendipity + fleet + browser + vector demo.
 
-Coordinates EverythingDB, SelfImprover, ChaosEngine, SerendipityEngine, GitHubSeamless,
-BrowserAutomation, UserscriptGenerator. Captures live smoke + userscript validation into DB
-and publishes evolution_summary to ROI status issues.
+Coordinates EverythingDB (optional vectors), SelfImprover, ChaosEngine, SerendipityEngine,
+GitHubSeamless, BrowserAutomation, UserscriptGenerator. Captures results into DB and
+publishes evolution_summary to ROI status issues.
 """
 
 from datetime import datetime, timezone
@@ -23,7 +23,7 @@ def _utc_now() -> str:
 
 class SingularityOrchestrator:
     def __init__(self, db: Optional[EverythingDB] = None):
-        self.db = db or EverythingDB()
+        self.db = db or EverythingDB(enable_vectors=True)
         self.improver = SelfImprover(db=self.db)
         self.gh = GitHubSeamless()
         self.chaos = ChaosEngine(db=self.db)
@@ -40,6 +40,7 @@ class SingularityOrchestrator:
             "evolution_reports": 0,
             "browser_tests": 0,
             "userscript_tests": 0,
+            "vector_demos": 0,
         }
         self.last_summary: str = ""
 
@@ -51,6 +52,7 @@ class SingularityOrchestrator:
                 "serendipity_cycle",
                 "chaos_resilience_test",
                 "browser_userscript_test",
+                "vector_demo",
                 "fleet_sync",
                 "publish_evolution_report",
             ]
@@ -61,7 +63,7 @@ class SingularityOrchestrator:
                 sample = "class CoreV1: pass  # TODO evolve"
                 self.improver.evolve(
                     sample,
-                    goal="compact + metrics + browser/userscript self-evo + multi-repo",
+                    goal="compact + metrics + vectors + multi-repo",
                 )
                 results.append(
                     {
@@ -99,7 +101,6 @@ class SingularityOrchestrator:
                 )
                 self.metrics["chaos_runs"] += len(battery)
             elif task == "browser_userscript_test":
-                # Live measurable path: HTTP smoke + userscript generate/validate
                 smoke = self.browser.run_smoke_suite()
                 us = self.userscript.run_self_evo_test()
                 self.db.add_sequence(
@@ -118,6 +119,19 @@ class SingularityOrchestrator:
                 )
                 self.metrics["browser_tests"] += 1
                 self.metrics["userscript_tests"] += 1
+            elif task == "vector_demo":
+                demo = self.db.demo_vector_query("self improve serendipity singularity evolution")
+                results.append(
+                    {
+                        "task": task,
+                        "hits": demo.get("hits"),
+                        "top_scores": [h.get("score") for h in (demo.get("top") or [])],
+                        "enable_vectors": demo.get("enable_vectors"),
+                        "embeddings_stored": self.db.metrics.get("embeddings_stored"),
+                        "vector_queries": self.db.metrics.get("vector_queries"),
+                    }
+                )
+                self.metrics["vector_demos"] += 1
             elif task == "fleet_sync":
                 summary = self.evolution_summary()
                 sync = self.gh.sync_status(
@@ -140,6 +154,7 @@ class SingularityOrchestrator:
                 summary = self.evolution_summary()
                 extra = {
                     "orchestrator_metrics": self.metrics.copy(),
+                    "db_metrics": self.db.metrics.copy(),
                     "serendipity": self.serendipity.get_report(),
                     "browser": self.browser.get_metrics(),
                     "userscript": self.userscript.get_metrics(),
@@ -169,8 +184,11 @@ class SingularityOrchestrator:
             f"[{_utc_now()}] cycle={self.cycle_count} "
             f"improvements={self.improver.improvements_made} "
             f"seqs={h.get('sequences', 0)} "
+            f"emb={h.get('embeddings', 0)} "
             f"llm={self.db.metrics.get('llm_calls', 0)} "
             f"learning={self.db.metrics.get('learning_writes', 0)} "
+            f"vq={self.db.metrics.get('vector_queries', 0)} "
+            f"vh={self.db.metrics.get('vector_hits', 0)} "
             f"chaos={self.chaos.experiments_run}/{self.chaos.resilience_score:.0f} "
             f"serendipity={self.serendipity.captures}/{self.serendipity.connections_found}"
             f"/bridges={self.serendipity.bridges_persisted}"
@@ -188,7 +206,7 @@ class SingularityOrchestrator:
 
     def get_status(self) -> Dict[str, Any]:
         return {
-            "version": "0.5.8",
+            "version": "0.5.9",
             "cycles": self.cycle_count,
             "db_health": self.db.get_health_snapshot(),
             "improver_report": self.improver.get_improvement_report(),
@@ -202,4 +220,4 @@ class SingularityOrchestrator:
         }
 
 
-print("SingularityOrchestrator v0.5.8 - Browser/userscript self-evo + fleet + publish")
+print("SingularityOrchestrator v0.5.9 - Vector demo + browser + fleet + publish")
