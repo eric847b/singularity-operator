@@ -1,6 +1,6 @@
 """
 Singularity Operator — ROI status + auto-seed next evolution cycle.
-v0.5.4 — Advances roadmap seeds (does not re-open completed work).
+v0.5.7 — Advances roadmap seeds (does not re-open completed work).
 Living status issue. Draft/issue only. No force-merge. Stdlib + requests.
 """
 from __future__ import annotations
@@ -15,60 +15,42 @@ import requests
 
 HOST_REPO = os.getenv("GITHUB_REPOSITORY", "eric847b/singularity-operator")
 STATUS_TITLE = "🚀 Singularity Operator ROI / Evolution Status (auto-updated)"
-VERSION = "0.5.4"
+VERSION = "0.5.7"
 
 CURRENCY_KW = ("revenue", "payment", "cash", "wallet", "monetize", "wealth", "profit")
 CAPABILITY_KW = ("evolve", "self-improve", "everythingdb", "singularity", "unlock", "orchestrator", "serendipity", "chaos")
 CONFLICT_KW = ("blocker", "stuck", "deadlock", "conflict", "priority", "decision")
 
-# Ordered roadmap seeds — pick the first whose title is not already open or recently completed.
-# Keeps continuous upgrading moving forward instead of looping on finished work.
 ROADMAP_SEEDS = [
-    {
-        "title": "Evolution cycle: Deeper serendipity engine (cross-sequence connections)",
-        "body": (
-            "**Auto-seeded by ROI status v0.5.4** when open work queue was empty.\n\n"
-            "### Goal\n"
-            "Advance continuous unlimited upgrading without owner steps.\n\n"
-            "### Suggested scope (AI-owned)\n"
-            "1. Cross-sequence unexpected connections from EverythingDB.\n"
-            "2. Random word / inspiration amplification hooks.\n"
-            "3. Capture serendipity events into sequences + evolution_summary.\n"
-            "4. Prefer stdlib + existing Groq path. Draft-only; no force-merge.\n\n"
-            "Labels: catalyst, self-heal\n"
-        ),
-    },
-    {
-        "title": "Evolution cycle: Cross-repo orchestration via GitHubSeamless",
-        "body": (
-            "**Auto-seeded by ROI status v0.5.4** when open work queue was empty.\n\n"
-            "### Goal\n"
-            "Operator improves sibling fleet repos autonomously.\n\n"
-            "### Suggested scope (AI-owned)\n"
-            "1. Use GitHubSeamless to read/push safe improvements to fleet repos.\n"
-            "2. Prefer currency path (zero-cost-wealth-playbook-tool) then capability.\n"
-            "3. Draft-only / issues; no force-merge.\n\n"
-            "Labels: catalyst, self-heal\n"
-        ),
-    },
-    {
-        "title": "Evolution cycle: Auto-publish evolution reports into ROI status comments",
-        "body": (
-            "**Auto-seeded by ROI status v0.5.4** when open work queue was empty.\n\n"
-            "### Goal\n"
-            "After each auto-evolve, post one-line evolution_summary as a comment on the living ROI issue.\n\n"
-            "### Suggested scope (AI-owned)\n"
-            "1. Workflow step or orchestrator hook posts comment to status issue.\n"
-            "2. Stdlib + requests. Draft-only.\n\n"
-            "Labels: catalyst, self-heal\n"
-        ),
-    },
     {
         "title": "Evolution cycle: Browser automation + userscript_gen live self-evo test",
         "body": (
-            "**Auto-seeded by ROI status v0.5.4** when open work queue was empty.\n\n"
+            "**Auto-seeded by ROI status v0.5.7** when open work queue was empty.\n\n"
             "### Goal\n"
             "Wire browser_automation + userscript_gen into a measurable self-evo test path.\n\n"
+            "### Suggested scope (AI-owned)\n"
+            "1. Exercise browser_automation against a public page or GitHub UI smoke path.\n"
+            "2. Generate or refresh a userscript via userscript_gen.\n"
+            "3. Capture result sequence into EverythingDB + post evolution_summary.\n"
+            "4. Draft-only; no force-merge.\n\n"
+            "Labels: catalyst, self-heal\n"
+        ),
+    },
+    {
+        "title": "Evolution cycle: Vector / multi-modal sequences in EverythingDB",
+        "body": (
+            "**Auto-seeded by ROI status v0.5.7** when open work queue was empty.\n\n"
+            "### Goal\n"
+            "Optional vector / multi-modal sequence support in EverythingDB for richer retrieval.\n\n"
+            "Labels: catalyst, self-heal\n"
+        ),
+    },
+    {
+        "title": "Evolution cycle: AGA Actions → singularity-operator metrics feedback loop",
+        "body": (
+            "**Auto-seeded by ROI status v0.5.7** when open work queue was empty.\n\n"
+            "### Goal\n"
+            "Tighter coupling: autonomous-github-agent Actions feed metrics back into singularity-operator.\n\n"
             "Labels: catalyst, self-heal\n"
         ),
     },
@@ -77,6 +59,9 @@ ROADMAP_SEEDS = [
 # Titles known completed — never re-seed these exact titles
 COMPLETED_SEED_TITLES = frozenset({
     "Evolution cycle: Expand EverythingDB metrics + SelfImprover learning loop",
+    "Evolution cycle: Deeper serendipity engine (cross-sequence connections)",
+    "Evolution cycle: Cross-repo orchestration via GitHubSeamless",
+    "Evolution cycle: Auto-publish evolution reports into ROI status comments",
 })
 
 
@@ -166,7 +151,6 @@ def find_status_issue(headers: dict) -> Optional[int]:
 
 
 def _existing_titles(headers: dict) -> set:
-    """Titles of open issues + recently closed evolution cycles (avoid re-seed)."""
     titles = set(COMPLETED_SEED_TITLES)
     try:
         for state in ("open", "closed"):
@@ -190,7 +174,6 @@ def _existing_titles(headers: dict) -> set:
 
 
 def seed_evolution_issue(headers: dict) -> Optional[Dict[str, Any]]:
-    """Seed the next unfinished roadmap item. Never re-seed completed titles."""
     existing = _existing_titles(headers)
     pick = None
     for item in ROADMAP_SEEDS:
@@ -198,11 +181,10 @@ def seed_evolution_issue(headers: dict) -> Optional[Dict[str, Any]]:
             pick = item
             break
     if not pick:
-        # All roadmap seeds already exist — create a generic advance ticket
         pick = {
             "title": f"Evolution cycle: Continuous upgrade {_utc_now_iso()[:10]}",
             "body": (
-                "**Auto-seeded by ROI status v0.5.4** — all roadmap seeds already present.\n\n"
+                "**Auto-seeded by ROI status v0.5.7** — all roadmap seeds already present.\n\n"
                 "Pick the highest-ROI remaining work from the README roadmap. "
                 "AI-owned; draft-only; no force-merge.\n"
             ),
@@ -274,7 +256,8 @@ def upsert_status(ranked: List[Dict[str, Any]], seeded: Optional[Dict[str, Any]]
         f"Auto-updated by **Singularity ROI Status v{VERSION}**. "
         "Scoring favors currency, capability unlock, conflict. "
         "Seed advances roadmap; does not re-open completed cycles. "
-        "Safe: issues + status only. No force-merge.",
+        "Safe: issues + status only. No force-merge. "
+        "Evolution reports auto-published by GitHubSeamless after each cycle.",
     ])
     body = "\n".join(lines)
 
