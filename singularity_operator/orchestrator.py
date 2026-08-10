@@ -1,8 +1,8 @@
-"""SingularityOrchestrator v0.5.7 - PDCA + chaos + serendipity + fleet sync + evolution report publish.
+"""SingularityOrchestrator v0.5.8 - PDCA + chaos + serendipity + fleet + browser/userscript self-evo.
 
-Coordinates EverythingDB, SelfImprover, ChaosEngine, SerendipityEngine, GitHubSeamless.
-After each cycle, posts structured evolution_summary comments to living ROI status
-issues on singularity-operator and autonomous-github-agent.
+Coordinates EverythingDB, SelfImprover, ChaosEngine, SerendipityEngine, GitHubSeamless,
+BrowserAutomation, UserscriptGenerator. Captures live smoke + userscript validation into DB
+and publishes evolution_summary to ROI status issues.
 """
 
 from datetime import datetime, timezone
@@ -13,6 +13,8 @@ from .self_improver import SelfImprover
 from .github_seamless import GitHubSeamless
 from .chaos_engine import ChaosEngine
 from .serendipity_engine import SerendipityEngine
+from .browser_automation import BrowserAutomation
+from .userscript_gen import UserscriptGenerator
 
 
 def _utc_now() -> str:
@@ -26,6 +28,8 @@ class SingularityOrchestrator:
         self.gh = GitHubSeamless()
         self.chaos = ChaosEngine(db=self.db)
         self.serendipity = SerendipityEngine(db=self.db)
+        self.browser = BrowserAutomation(headless=True)
+        self.userscript = UserscriptGenerator()
         self.cycle_count = 0
         self.metrics = {
             "cycles": 0,
@@ -34,6 +38,8 @@ class SingularityOrchestrator:
             "chaos_runs": 0,
             "fleet_syncs": 0,
             "evolution_reports": 0,
+            "browser_tests": 0,
+            "userscript_tests": 0,
         }
         self.last_summary: str = ""
 
@@ -44,6 +50,7 @@ class SingularityOrchestrator:
                 "propose_unknown_sequences",
                 "serendipity_cycle",
                 "chaos_resilience_test",
+                "browser_userscript_test",
                 "fleet_sync",
                 "publish_evolution_report",
             ]
@@ -54,7 +61,7 @@ class SingularityOrchestrator:
                 sample = "class CoreV1: pass  # TODO evolve"
                 self.improver.evolve(
                     sample,
-                    goal="compact + self_evolve_v5 + metrics + chaos-resilient + serendipity + multi-repo",
+                    goal="compact + metrics + browser/userscript self-evo + multi-repo",
                 )
                 results.append(
                     {
@@ -91,6 +98,26 @@ class SingularityOrchestrator:
                     }
                 )
                 self.metrics["chaos_runs"] += len(battery)
+            elif task == "browser_userscript_test":
+                # Live measurable path: HTTP smoke + userscript generate/validate
+                smoke = self.browser.run_smoke_suite()
+                us = self.userscript.run_self_evo_test()
+                self.db.add_sequence(
+                    {"browser_smoke": smoke, "userscript": us},
+                    "self_evo:browser_userscript",
+                )
+                results.append(
+                    {
+                        "task": task,
+                        "browser_ok": smoke.get("ok"),
+                        "browser_pass_rate": smoke.get("pass_rate"),
+                        "userscript_ok": (us.get("validation") or {}).get("ok"),
+                        "browser_summary": self.browser.summary_line(),
+                        "userscript_summary": self.userscript.summary_line(),
+                    }
+                )
+                self.metrics["browser_tests"] += 1
+                self.metrics["userscript_tests"] += 1
             elif task == "fleet_sync":
                 summary = self.evolution_summary()
                 sync = self.gh.sync_status(
@@ -114,6 +141,8 @@ class SingularityOrchestrator:
                 extra = {
                     "orchestrator_metrics": self.metrics.copy(),
                     "serendipity": self.serendipity.get_report(),
+                    "browser": self.browser.get_metrics(),
+                    "userscript": self.userscript.get_metrics(),
                     "gh": self.gh.get_metrics(),
                 }
                 pub = self.gh.publish_evolution_report(summary, extra=extra)
@@ -146,25 +175,31 @@ class SingularityOrchestrator:
             f"serendipity={self.serendipity.captures}/{self.serendipity.connections_found}"
             f"/bridges={self.serendipity.bridges_persisted}"
             f"/groq={self.serendipity.groq_insights} "
+            f"browser={self.browser.session_metrics.get('smoke_ok', 0)}/{self.browser.session_metrics.get('smoke_fail', 0)} "
+            f"userscript={self.userscript.metrics.get('validated', 0)} "
             f"fleet_syncs={self.metrics.get('fleet_syncs', 0)} "
             f"evolution_reports={self.metrics.get('evolution_reports', 0)} "
             f"| {self.improver.learning_summary_line()} "
             f"| {self.chaos.summary_line()} "
-            f"| {self.serendipity.summary_line()}"
+            f"| {self.serendipity.summary_line()} "
+            f"| {self.browser.summary_line()} "
+            f"| {self.userscript.summary_line()}"
         )
 
     def get_status(self) -> Dict[str, Any]:
         return {
-            "version": "0.5.7",
+            "version": "0.5.8",
             "cycles": self.cycle_count,
             "db_health": self.db.get_health_snapshot(),
             "improver_report": self.improver.get_improvement_report(),
             "chaos_report": self.chaos.get_report(),
             "serendipity_report": self.serendipity.get_report(),
+            "browser_metrics": self.browser.get_metrics(),
+            "userscript_metrics": self.userscript.get_metrics(),
             "gh_metrics": self.gh.get_metrics(),
             "metrics": self.metrics,
             "last_summary": self.last_summary or self.evolution_summary(),
         }
 
 
-print("SingularityOrchestrator v0.5.7 - Cycles + fleet sync + auto-publish evolution reports")
+print("SingularityOrchestrator v0.5.8 - Browser/userscript self-evo + fleet + publish")
