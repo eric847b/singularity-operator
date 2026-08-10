@@ -1,7 +1,7 @@
-"""SingularityOrchestrator v0.5.5 - PDCA cycles with chaos + deeper serendipity.
+"""SingularityOrchestrator v0.5.6 - PDCA cycles with chaos + serendipity + multi-repo fleet sync.
 
 Coordinates EverythingDB, SelfImprover, ChaosEngine, SerendipityEngine, GitHubSeamless.
-Emits evolution_summary for ROI status after each cycle.
+Emits evolution_summary for ROI status after each cycle. Optional cross-repo status sync.
 """
 
 from datetime import datetime, timezone
@@ -31,6 +31,7 @@ class SingularityOrchestrator:
             "improvements": 0,
             "serendipity": 0,
             "chaos_runs": 0,
+            "fleet_syncs": 0,
         }
         self.last_summary: str = ""
 
@@ -41,6 +42,7 @@ class SingularityOrchestrator:
                 "propose_unknown_sequences",
                 "serendipity_cycle",
                 "chaos_resilience_test",
+                "fleet_sync",
             ]
         results = []
         for task in tasks:
@@ -49,7 +51,7 @@ class SingularityOrchestrator:
                 sample = "class CoreV1: pass  # TODO evolve"
                 improved = self.improver.evolve(
                     sample,
-                    goal="compact + self_evolve_v5 + metrics + chaos-resilient + serendipity",
+                    goal="compact + self_evolve_v5 + metrics + chaos-resilient + serendipity + multi-repo",
                 )
                 results.append(
                     {
@@ -86,6 +88,31 @@ class SingularityOrchestrator:
                     }
                 )
                 self.metrics["chaos_runs"] += len(battery)
+            elif task == "fleet_sync":
+                # Concrete multi-repo action: push evolution summary to fleet
+                summary = self.evolution_summary()
+                sync = self.gh.sync_status(summary)
+                # Optionally propagate one recent serendipity insight as catalyst
+                cat = None
+                report = self.serendipity.get_report()
+                tail = report.get("log_tail") or []
+                if tail:
+                    last = tail[-1]
+                    cat = self.gh.propagate_catalyst(
+                        key=str(last.get("spark", "serendipity")),
+                        insight=str(last.get("insight", "cross-sequence bridge"))[:300],
+                        target_repos=["eric847b/autonomous-github-agent"],
+                    )
+                results.append(
+                    {
+                        "task": task,
+                        "sync": sync.get("status"),
+                        "targets": sync.get("targets"),
+                        "catalyst": (cat or {}).get("status"),
+                        "gh_metrics": self.gh.get_metrics(),
+                    }
+                )
+                self.metrics["fleet_syncs"] += 1
             else:
                 results.append({"task": task, "status": "noop"})
         self.metrics["cycles"] += 1
@@ -106,6 +133,7 @@ class SingularityOrchestrator:
             f"serendipity={self.serendipity.captures}/{self.serendipity.connections_found}"
             f"/bridges={self.serendipity.bridges_persisted}"
             f"/groq={self.serendipity.groq_insights} "
+            f"fleet_syncs={self.metrics.get('fleet_syncs', 0)} "
             f"| {self.improver.learning_summary_line()} "
             f"| {self.chaos.summary_line()} "
             f"| {self.serendipity.summary_line()}"
@@ -113,15 +141,16 @@ class SingularityOrchestrator:
 
     def get_status(self) -> Dict[str, Any]:
         return {
-            "version": "0.5.5",
+            "version": "0.5.6",
             "cycles": self.cycle_count,
             "db_health": self.db.get_health_snapshot(),
             "improver_report": self.improver.get_improvement_report(),
             "chaos_report": self.chaos.get_report(),
             "serendipity_report": self.serendipity.get_report(),
+            "gh_metrics": self.gh.get_metrics(),
             "metrics": self.metrics,
             "last_summary": self.last_summary or self.evolution_summary(),
         }
 
 
-print("SingularityOrchestrator v0.5.5 - Cycles + chaos + deeper serendipity + evolution summary")
+print("SingularityOrchestrator v0.5.6 - Cycles + chaos + serendipity + multi-repo fleet sync")
