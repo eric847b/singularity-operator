@@ -1,11 +1,11 @@
-"""Singularity Operator v0.5.7 - Ultimate self-improving AI system.
-EverythingDB + SelfImprover + ChaosEngine + SerendipityEngine + Orchestration + GitHubSeamless.
+"""Singularity Operator v0.5.8 - Ultimate self-improving AI system.
+EverythingDB + SelfImprover + ChaosEngine + SerendipityEngine + Orchestration +
+GitHubSeamless + BrowserAutomation + UserscriptGenerator.
 
-v0.5.7: Auto-publish evolution_summary comments to ROI status issues (SO + AGA).
-v0.5.6: Multi-repo fleet orchestration — status sync + catalyst propagation.
-v0.5.5: Deeper serendipity — richer scoring, Groq-assisted bridges, bridge persist.
-v0.5.4: Cross-sequence connections + advancing auto-seed.
-v0.5.3: Real chaos engineering experiments.
+v0.5.8: Browser smoke + userscript generate/validate live self-evo test path.
+v0.5.7: Auto-publish evolution_summary comments to ROI status issues.
+v0.5.6: Multi-repo fleet orchestration.
+v0.5.5: Deeper serendipity.
 """
 
 from .everything_db import EverythingDB
@@ -15,8 +15,10 @@ from .github_seamless import GitHubSeamless
 from .orchestrator import SingularityOrchestrator
 from .chaos_engine import ChaosEngine
 from .serendipity_engine import SerendipityEngine
+from .browser_automation import BrowserAutomation
+from .userscript_gen import UserscriptGenerator
 
-__version__ = "0.5.7"
+__version__ = "0.5.8"
 __all__ = [
     "EverythingDB",
     "SelfImprover",
@@ -25,4 +27,6 @@ __all__ = [
     "SingularityOrchestrator",
     "ChaosEngine",
     "SerendipityEngine",
+    "BrowserAutomation",
+    "UserscriptGenerator",
 ]
