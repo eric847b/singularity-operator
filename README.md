@@ -1,18 +1,17 @@
-# Singularity Operator v0.5.7
+# Singularity Operator v0.5.8
 
-**The ultimate comprehensive self-improving AI system** with universal EverythingDB, chaos engineering, deeper serendipity, multi-repo fleet orchestration, and **auto-published evolution reports** on living ROI status issues.
+**The ultimate comprehensive self-improving AI system** with EverythingDB, chaos, serendipity, multi-repo fleet orchestration, auto-published evolution reports, and a **live browser + userscript self-evo test path**.
 
-**Mission**: Capture every sequence, complete unknowns, self-evolve, orchestrate multi-AI, act on GitHub. Accelerate the path to singularity. Perfection is the only acceptable end-state.
+**Mission**: Capture every sequence, complete unknowns, self-evolve, orchestrate multi-AI, act on GitHub. Accelerate the path to singularity.
 
-## What's New in v0.5.7 (Auto-Publish Evolution Reports)
-- `GitHubSeamless.publish_evolution_report()` posts structured `evolution_summary` comments to:
-  - `singularity-operator` ROI status issue
-  - `autonomous-github-agent` Fleet ROI Catalyst Status issue
-- Orchestrator cycle task `publish_evolution_report` runs after each PDCA cycle.
-- `auto-evolve.yml` workflow step publishes after the run (uses `GITHUB_TOKEN` / `GH_FULL_PAT`).
+## What's New in v0.5.8 (Browser + Userscript Self-Evo)
+- **BrowserAutomation**: stdlib HTTP smoke suite against fleet GitHub pages + optional Playwright.
+- **UserscriptGenerator**: production Tampermonkey script generation + structural validation.
+- Orchestrator task `browser_userscript_test` captures results into EverythingDB.
+- Metrics surface in `evolution_summary` and ROI status publish payload.
 
-## What's New in v0.5.6 / v0.5.5
-- Multi-repo fleet sync + catalyst propagation; deeper serendipity with Groq bridges.
+## What's New in v0.5.7 / v0.5.6
+- Auto-publish evolution reports to ROI status issues; multi-repo fleet sync + catalyst propagation.
 
 ## Quick Start
 ```bash
@@ -22,20 +21,21 @@ pip install -e .
 python singularity_operator.py
 ```
 
-Workflows: `auto-evolve.yml` (cycle + publish) · `roi-status.yml` (advancing seed).
+Workflows: `auto-evolve.yml` · `roi-status.yml`.
 
 ## Core Architecture
-1. **EverythingDB** — Universal memory, propose unknowns, metrics persist.
+1. **EverythingDB** — Universal memory + metrics persist.
 2. **SelfImprover** — AI evolution + learning sequences.
-3. **ChaosEngine** — Controlled failures + resilience score.
+3. **ChaosEngine** — Resilience experiments.
 4. **SerendipityEngine** — Cross-sequence bridges + Groq insights.
-5. **Orchestrator** — PDCA + fleet_sync + **publish_evolution_report**.
-6. **GitHubSeamless** — Own-repo + multi-repo + ROI status comment publisher.
-7. **ROI Status** — Highest-return next action; roadmap-advancing auto-seed.
+5. **BrowserAutomation** — Live HTTP smoke / optional Playwright.
+6. **UserscriptGenerator** — Tampermonkey generate + validate.
+7. **Orchestrator** — PDCA including browser_userscript_test + publish.
+8. **GitHubSeamless** — Fleet sync + ROI evolution report comments.
 
 ## Roadmap (Next Highest-Return)
-- Browser automation + userscript_gen live self-evo test.
 - Optional vector / multi-modal sequences in EverythingDB.
-- Tighter coupling: autonomous-github-agent Actions → singularity-operator metrics feedback.
+- AGA Actions → singularity-operator metrics feedback loop.
+- Deeper Playwright path when available in CI.
 
-*Current status: v0.5.7 auto-publish evolution reports operational.*
+*Current status: v0.5.8 browser + userscript live self-evo operational.*
