@@ -1,22 +1,20 @@
-# Singularity Operator v0.5.5
+# Singularity Operator v0.5.6
 
-**The ultimate comprehensive self-improving AI system** with universal EverythingDB, real chaos engineering, and a **deeper serendipity engine** for unexpected cross-sequence connections.
+**The ultimate comprehensive self-improving AI system** with universal EverythingDB, real chaos engineering, deeper serendipity, and **multi-repo fleet orchestration** via GitHubSeamless.
 
 **Mission**: Capture every sequence, complete unknowns, self-evolve, orchestrate multi-AI, act on GitHub. Accelerate the path to singularity. Perfection is the only acceptable end-state.
 
+## What's New in v0.5.6 (Multi-Repo Orchestration)
+- **GitHubSeamless deepened**: fleet list, `sync_status`, `propagate_catalyst`, `fleet_health_snapshot`.
+- **Concrete actions** with `autonomous-github-agent` and sibling fleet repos (status comments / catalyst issues).
+- Orchestrator cycle now includes `fleet_sync` task — pushes evolution summary + optional catalyst insight across the fleet.
+- Metrics: `cross_repo_syncs`, `catalyst_propagations`, `fleet_syncs`.
+
 ## What's New in v0.5.5 (Deeper Serendipity)
-- **Richer pair scoring**: tag divergence + Jaccard token sweet-spot + length asymmetry.
-- **Groq-assisted insights**: top connections optionally receive a compact novel insight via existing `call_ai` / Groq path.
-- **Explicit bridge records**: bidirectional `serendipity:bridge` sequences persisted for later retrieval.
-- Metrics: `bridges_persisted`, `groq_insights` surface in reports and `evolution_summary`.
+- Richer pair scoring, Groq-assisted insights, explicit bridge records.
 
-## What's New in v0.5.4 (Serendipity + Advancing Seed)
-- **SerendipityEngine**: Cross-sequence unexpected connections, random-word amplification, capture into DB.
-- Wired into orchestrator cycle + `evolution_summary`.
-- **ROI auto-seed fixed**: No longer re-opens completed work. Advances ordered roadmap.
-
-## What's New in v0.5.3 (Chaos Engineering)
-- ChaosEngine: latency, outage, cache poison, metric noise, serendipity storm — inject/recover/measure resilience.
+## What's New in v0.5.4 / v0.5.3
+- SerendipityEngine + advancing auto-seed; ChaosEngine resilience experiments.
 
 ## Quick Start
 ```bash
@@ -32,15 +30,15 @@ Workflows: `auto-evolve.yml` · `roi-status.yml` (advancing seed).
 1. **EverythingDB** — Universal memory, propose unknowns, metrics persist.
 2. **SelfImprover** — AI evolution + learning sequences.
 3. **ChaosEngine** — Controlled failures + resilience score.
-4. **SerendipityEngine** — Cross-sequence bridges + Groq insights + inspiration amplification.
-5. **Orchestrator** — PDCA cycles; evolution_summary for ROI surface.
-6. **GitHubSeamless** — Act on own and sibling repos.
+4. **SerendipityEngine** — Cross-sequence bridges + Groq insights + amplification.
+5. **Orchestrator** — PDCA cycles + fleet_sync; evolution_summary for ROI surface.
+6. **GitHubSeamless** — Own-repo + multi-repo fleet status sync & catalyst propagation.
 7. **ROI Status** — Highest-return next action; roadmap-advancing auto-seed.
 
 ## Roadmap (Next Highest-Return)
-- Cross-repo orchestration via GitHubSeamless + autonomous-github-agent.
-- Auto-publish evolution reports into ROI status issue comments.
+- Auto-publish evolution reports into ROI status issue comments (now partially enabled via fleet_sync).
 - Browser automation + userscript_gen live self-evo test.
 - Optional vector / multi-modal sequences in EverythingDB.
+- Tighter coupling loop: autonomous-github-agent Actions → singularity-operator metrics feedback.
 
-*Current status: v0.5.5 deeper serendipity operational.*
+*Current status: v0.5.6 multi-repo fleet orchestration operational.*
