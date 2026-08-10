@@ -1,33 +1,25 @@
-# Singularity Operator v0.5.10
+# Singularity Operator v0.5.11
 
-**Self-improving AI system** with EverythingDB (vectors), chaos, serendipity, multi-repo fleet orchestration, browser/userscript tests, and a **closed metrics feedback loop from autonomous-github-agent**.
+**Self-improving AI system** with EverythingDB, fleet orchestration, AGA metrics feedback, and **continuous upgrade from live ROI ranking**.
 
-## What's New in v0.5.10 (AGA → SO Feedback Loop)
-- `GitHubSeamless.fetch_aga_profile()` reads `eric847b/autonomous-github-agent/.agent_profile.json`
-- `fetch_aga_roi_signals()` pulls latest ROI/fleet status issue comments
-- `ingest_aga_feedback(db=...)` stores compact metrics into EverythingDB (`aga:feedback`)
-- Orchestrator task `aga_feedback` each cycle; surfaces `aga_runs`, `roi_top_ref`, `fleet_health` in `evolution_summary`
+## What's New in v0.5.11
+- Orchestrator task `continuous_roi_rank` records AGA `roi_top_ref` / score into EverythingDB each cycle.
+- **SO#9 closed** with real cross-repo currency work: OSS/Maintainer niche on `zero-cost-wealth-playbook-tool`.
+- Ranking loop: ingest AGA → rank → prefer currency fleet path → measurable artifact.
 
 ## Quick Start
 ```bash
-git clone https://github.com/eric847b/singularity-operator.git
-cd singularity-operator
 pip install -e .
 python singularity_operator.py
 ```
 
-Requires `GITHUB_TOKEN` / `GH_FULL_PAT` for live AGA ingest and publish.
+Requires `GITHUB_TOKEN` / `GH_FULL_PAT` for live AGA ingest and fleet actions.
 
-## Core Architecture
-1. **EverythingDB** — Sequences + optional vectors + multi-modal tags.
-2. **SelfImprover / Chaos / Serendipity** — Evolution + resilience + bridges.
-3. **BrowserAutomation / UserscriptGenerator** — Live self-evo tests.
-4. **GitHubSeamless** — Fleet sync, evolution report publish, **AGA feedback ingest**.
-5. **Orchestrator** — PDCA including `aga_feedback` + `vector_demo` + publish.
+## Architecture
+EverythingDB · SelfImprover · Chaos · Serendipity · Browser · Userscript · GitHubSeamless (fleet + AGA feedback) · Orchestrator (incl. continuous_roi_rank)
 
-## Roadmap (Next Highest-Return)
-- Continuous upgrade cycles from live ROI ranking.
+## Roadmap
+- Next live-ranked catalyst work after empty queue / new seeds.
 - Optional real embedding backend (feature-flagged).
-- Deeper Playwright path in CI.
 
-*Current status: v0.5.10 AGA metrics feedback loop operational.*
+*Status: v0.5.11 continuous ROI ranking operational. SO#9 closed via currency cross-repo proof.*
