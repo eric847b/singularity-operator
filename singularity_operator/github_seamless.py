@@ -1,8 +1,8 @@
-"""GitHubSeamless v0.5.6 - Multi-repo orchestration for Singularity Operator.
+"""GitHubSeamless v0.5.7 - Multi-repo orchestration + auto-publish evolution reports.
 
-Real API actions where token available. Supports own-repo pushes and concrete
-cross-repo actions with the fleet (autonomous-github-agent, AI-Collaboration-Hub,
-zero-cost-wealth-playbook-tool, modular-hub-modernization, etc.).
+Real API actions where token available. Supports own-repo pushes, fleet status
+sync, catalyst propagation, and structured evolution_summary comments on ROI
+status issues (singularity-operator + autonomous-github-agent).
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import base64
 import json
 import os
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
@@ -20,7 +20,6 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-# Core fleet — highest-signal sibling repos for cross-orchestration
 FLEET_REPOS = [
     "eric847b/singularity-operator",
     "eric847b/autonomous-github-agent",
@@ -29,9 +28,15 @@ FLEET_REPOS = [
     "eric847b/modular-hub-modernization",
 ]
 
+# Living ROI / status issues — title prefixes used to locate them
+ROI_STATUS_TARGETS: List[Tuple[str, str]] = [
+    ("eric847b/singularity-operator", "🚀 Singularity Operator ROI"),
+    ("eric847b/autonomous-github-agent", "🚀 Fleet ROI Catalyst Status"),
+]
+
 
 class GitHubSeamless:
-    """Seamless GitHub agent with multi-repo fleet actions."""
+    """Seamless GitHub agent with multi-repo fleet + evolution report publish."""
 
     def __init__(
         self,
@@ -39,7 +44,7 @@ class GitHubSeamless:
         owner: str = "eric847b",
         repo: str = "singularity-operator",
     ):
-        self.token = token or os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+        self.token = token or os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN") or os.getenv("GH_FULL_PAT")
         self.owner = owner
         self.repo = repo
         self.full_name = f"{owner}/{repo}"
@@ -50,6 +55,7 @@ class GitHubSeamless:
             "comments": 0,
             "cross_repo_syncs": 0,
             "catalyst_propagations": 0,
+            "evolution_reports": 0,
             "errors": 0,
         }
         self.base = "https://api.github.com"
@@ -79,7 +85,6 @@ class GitHubSeamless:
                 json=json_body,
                 timeout=timeout,
             )
-            body: Any
             try:
                 body = r.json() if r.text else {}
             except Exception:
@@ -97,9 +102,6 @@ class GitHubSeamless:
             self.metrics["errors"] += 1
             return {"ok": False, "status": 0, "error": str(e)[:200]}
 
-    # ------------------------------------------------------------------
-    # Own-repo primitives
-    # ------------------------------------------------------------------
     def push_update(
         self,
         file_path: str,
@@ -107,7 +109,6 @@ class GitHubSeamless:
         commit_msg: str = "chore(autonomous): self-evolve update [GitHubSeamless]",
         branch: str = "main",
     ) -> Dict[str, Any]:
-        """Update or create a file via Contents API."""
         path = f"/repos/{self.owner}/{self.repo}/contents/{file_path}"
         sha = None
         get = self._req("GET", f"{path}?ref={branch}")
@@ -195,12 +196,103 @@ class GitHubSeamless:
             }
         return {"status": "error", **res}
 
-    # ------------------------------------------------------------------
-    # Multi-repo fleet actions (concrete orchestration)
-    # ------------------------------------------------------------------
     def list_fleet(self) -> List[str]:
-        """Return the canonical fleet repo list."""
         return list(FLEET_REPOS)
+
+    def _find_issue_by_title_prefix(
+        self, owner: str, repo: str, prefix: str
+    ) -> Optional[int]:
+        res = self._req(
+            "GET",
+            f"/repos/{owner}/{repo}/issues?state=open&per_page=30&sort=updated",
+        )
+        if not res.get("ok") or not isinstance(res.get("data"), list):
+            return None
+        for issue in res["data"]:
+            if issue.get("pull_request"):
+                continue
+            title = issue.get("title") or ""
+            if title.startswith(prefix):
+                return issue.get("number")
+        return None
+
+    def publish_evolution_report(
+        self,
+        summary: str,
+        extra: Optional[Dict[str, Any]] = None,
+        targets: Optional[List[Tuple[str, str]]] = None,
+    ) -> Dict[str, Any]:
+        """Post a structured evolution_summary comment on living ROI status issues.
+
+        Default targets:
+          - singularity-operator ROI status issue
+          - autonomous-github-agent Fleet ROI Catalyst Status issue
+
+        Creates a minimal status issue if none exists (labeled fleet-status).
+        """
+        stamp = _utc_now()
+        extra = extra or {}
+        lines = [
+            f"### 📈 Evolution report",
+            f"**From:** `{self.full_name}`  ",
+            f"**At:** `{stamp}`  ",
+            "",
+            "```",
+            summary.strip()[:800],
+            "```",
+        ]
+        if extra:
+            lines.append("")
+            lines.append("<details><summary>Extra metrics</summary>\n")
+            lines.append("```json")
+            lines.append(json.dumps(extra, indent=2)[:1200])
+            lines.append("```")
+            lines.append("</details>")
+        lines.extend([
+            "",
+            f"— Auto-published by **GitHubSeamless v0.5.7** (evolution report)",
+        ])
+        body = "\n".join(lines)
+
+        tgt = targets or ROI_STATUS_TARGETS
+        results: List[Dict[str, Any]] = []
+
+        for full, prefix in tgt:
+            try:
+                o, r = full.split("/", 1)
+            except ValueError:
+                results.append({"repo": full, "status": "skip", "reason": "bad name"})
+                continue
+
+            issue_num = self._find_issue_by_title_prefix(o, r, prefix)
+            if issue_num:
+                res = self.comment_on_issue(issue_num, body, owner=o, repo=r)
+                entry = {"repo": full, "action": "comment", "issue": issue_num, **res}
+            else:
+                # Fallback: create living status issue then comment is not needed — body is the issue
+                res = self.create_issue(
+                    title=f"{prefix} (auto-updated)",
+                    body=(
+                        f"**Living ROI / Evolution status** for `{full}`\n\n"
+                        f"Seeded by GitHubSeamless evolution report publisher.\n\n"
+                        f"{body}"
+                    ),
+                    labels=["fleet-status", "catalyst", "self-heal"],
+                    owner=o,
+                    repo=r,
+                )
+                entry = {"repo": full, "action": "issue", **res}
+
+            if entry.get("status") in ("commented", "created"):
+                self.metrics["evolution_reports"] += 1
+            results.append(entry)
+
+        return {
+            "status": "published",
+            "targets": len(tgt),
+            "results": results,
+            "metrics": self.metrics.copy(),
+        }
 
     def sync_status(
         self,
@@ -208,11 +300,6 @@ class GitHubSeamless:
         target_repos: Optional[List[str]] = None,
         label: str = "fleet-status",
     ) -> Dict[str, Any]:
-        """Propagate a compact evolution / ROI status note across fleet repos.
-
-        Strategy: find an open issue labeled fleet-status (or create one) and
-        append a comment. Falls back to creating a short status issue.
-        """
         targets = target_repos or [x for x in FLEET_REPOS if x != self.full_name]
         results: List[Dict[str, Any]] = []
         stamp = _utc_now()
@@ -220,7 +307,7 @@ class GitHubSeamless:
             f"**Cross-repo status sync** from `{self.full_name}`  \n"
             f"**At:** `{stamp}`  \n\n"
             f"{summary}\n\n"
-            f"— GitHubSeamless v0.5.6 multi-repo orchestration"
+            f"— GitHubSeamless v0.5.7 multi-repo orchestration"
         )
 
         for full in targets:
@@ -230,7 +317,6 @@ class GitHubSeamless:
                 results.append({"repo": full, "status": "skip", "reason": "bad name"})
                 continue
 
-            # Prefer commenting on an existing open fleet-status issue
             search = self._req(
                 "GET",
                 f"/repos/{o}/{r}/issues?state=open&labels={label}&per_page=5",
@@ -243,7 +329,6 @@ class GitHubSeamless:
                 res = self.comment_on_issue(issue_num, body, owner=o, repo=r)
                 results.append({"repo": full, "action": "comment", "issue": issue_num, **res})
             else:
-                # Create a lightweight status issue
                 res = self.create_issue(
                     title=f"📡 Fleet status sync from {self.repo}",
                     body=body,
@@ -270,15 +355,7 @@ class GitHubSeamless:
         source_issue: Optional[int] = None,
         target_repos: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
-        """Propagate a serendipity / catalyst insight as a short issue on sibling repos.
-
-        Used by the deeper serendipity engine and orchestrator to share unexpected
-        connections across the fleet (especially autonomous-github-agent).
-        """
-        targets = target_repos or [
-            x for x in FLEET_REPOS if x != self.full_name
-        ]
-        # Prefer autonomous-github-agent first — highest coupling
+        targets = target_repos or [x for x in FLEET_REPOS if x != self.full_name]
         targets = sorted(
             targets,
             key=lambda x: 0 if "autonomous-github-agent" in x else 1,
@@ -292,10 +369,10 @@ class GitHubSeamless:
             f"**Source issue:** {source_issue or 'n/a'}  \n"
             f"**At:** `{stamp}`  \n\n"
             f"### Insight\n{insight}\n\n"
-            f"— Auto-generated by GitHubSeamless v0.5.6 (cross-repo catalyst)"
+            f"— Auto-generated by GitHubSeamless v0.5.7 (cross-repo catalyst)"
         )
 
-        for full in targets[:3]:  # polite limit
+        for full in targets[:3]:
             try:
                 o, r = full.split("/", 1)
             except ValueError:
@@ -320,7 +397,6 @@ class GitHubSeamless:
         }
 
     def fleet_health_snapshot(self) -> Dict[str, Any]:
-        """Lightweight open-issue counts across the fleet (read-only)."""
         snap: Dict[str, Any] = {"at": _utc_now(), "repos": {}}
         for full in FLEET_REPOS:
             try:
@@ -328,10 +404,8 @@ class GitHubSeamless:
             except ValueError:
                 continue
             res = self._req("GET", f"/repos/{o}/{r}/issues?state=open&per_page=1")
-            # Use Link header or just presence; keep minimal
             open_count = "?"
             if res.get("ok"):
-                # Best-effort: GitHub returns total via search for accuracy, but avoid extra call
                 open_count = len(res.get("data") or [])
             snap["repos"][full] = {"sample_open": open_count, "ok": res.get("ok", False)}
         return snap
@@ -340,4 +414,4 @@ class GitHubSeamless:
         return self.metrics.copy()
 
 
-print("GitHubSeamless v0.5.6 - Multi-repo fleet orchestration ready")
+print("GitHubSeamless v0.5.7 - Multi-repo + evolution report publish ready")
