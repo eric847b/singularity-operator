@@ -1,6 +1,6 @@
 """
 Singularity Operator — ROI status + auto-seed next evolution cycle.
-v0.5.9 — Advances roadmap seeds (does not re-open completed work).
+v0.5.10 — Advances roadmap seeds (does not re-open completed work).
 Living status issue. Draft/issue only. No force-merge. Stdlib + requests.
 """
 from __future__ import annotations
@@ -15,26 +15,23 @@ import requests
 
 HOST_REPO = os.getenv("GITHUB_REPOSITORY", "eric847b/singularity-operator")
 STATUS_TITLE = "🚀 Singularity Operator ROI / Evolution Status (auto-updated)"
-VERSION = "0.5.9"
+VERSION = "0.5.10"
 
 CURRENCY_KW = ("revenue", "payment", "cash", "wallet", "monetize", "wealth", "profit")
 CAPABILITY_KW = (
     "evolve", "self-improve", "everythingdb", "singularity", "unlock",
-    "orchestrator", "serendipity", "chaos", "browser", "userscript", "vector",
+    "orchestrator", "serendipity", "chaos", "browser", "userscript", "vector", "aga",
 )
 CONFLICT_KW = ("blocker", "stuck", "deadlock", "conflict", "priority", "decision")
 
 ROADMAP_SEEDS = [
     {
-        "title": "Evolution cycle: AGA Actions → singularity-operator metrics feedback loop",
+        "title": "Evolution cycle: Continuous upgrade from live ROI ranking",
         "body": (
-            "**Auto-seeded by ROI status v0.5.9** when open work queue was empty.\n\n"
+            "**Auto-seeded by ROI status v0.5.10** when open work queue was empty.\n\n"
             "### Goal\n"
-            "Tighter coupling: autonomous-github-agent Actions feed metrics back into singularity-operator.\n\n"
-            "### Suggested scope (AI-owned)\n"
-            "1. Accept inbound status/metrics from AGA via issue comment or artifact.\n"
-            "2. Fold into EverythingDB sequences + evolution_summary.\n"
-            "3. Prefer existing GitHubSeamless path; draft-only; no force-merge.\n\n"
+            "Pick and execute the highest-ROI open work from live fleet ranking "
+            "(including AGA-fed roi_top_ref). AI-owned; draft-only; no force-merge.\n\n"
             "Labels: catalyst, self-heal\n"
         ),
     },
@@ -47,6 +44,7 @@ COMPLETED_SEED_TITLES = frozenset({
     "Evolution cycle: Auto-publish evolution reports into ROI status comments",
     "Evolution cycle: Browser automation + userscript_gen live self-evo test",
     "Evolution cycle: Vector / multi-modal sequences in EverythingDB",
+    "Evolution cycle: AGA Actions → singularity-operator metrics feedback loop",
 })
 
 
@@ -169,8 +167,8 @@ def seed_evolution_issue(headers: dict) -> Optional[Dict[str, Any]]:
         pick = {
             "title": f"Evolution cycle: Continuous upgrade {_utc_now_iso()[:10]}",
             "body": (
-                "**Auto-seeded by ROI status v0.5.9** — all roadmap seeds already present.\n\n"
-                "Pick the highest-ROI remaining work from the README roadmap. "
+                "**Auto-seeded by ROI status v0.5.10** — all roadmap seeds already present.\n\n"
+                "Pick the highest-ROI remaining work from live ranking / README. "
                 "AI-owned; draft-only; no force-merge.\n"
             ),
         }
@@ -239,7 +237,7 @@ def upsert_status(ranked: List[Dict[str, Any]], seeded: Optional[Dict[str, Any]]
         "",
         "---",
         f"Auto-updated by **Singularity ROI Status v{VERSION}**. "
-        "Vector similarity + browser/userscript self-evo operational. "
+        "AGA metrics feedback loop operational. "
         "Safe: issues + status only. No force-merge.",
     ])
     body = "\n".join(lines)
