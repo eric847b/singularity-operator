@@ -1,8 +1,7 @@
-"""SingularityOrchestrator v0.5.9 - PDCA + chaos + serendipity + fleet + browser + vector demo.
+"""SingularityOrchestrator v0.5.10 - PDCA + AGA metrics feedback loop.
 
-Coordinates EverythingDB (optional vectors), SelfImprover, ChaosEngine, SerendipityEngine,
-GitHubSeamless, BrowserAutomation, UserscriptGenerator. Captures results into DB and
-publishes evolution_summary to ROI status issues.
+Coordinates EverythingDB, SelfImprover, Chaos, Serendipity, GitHubSeamless,
+Browser, Userscript. Ingests autonomous-github-agent profile metrics into DB.
 """
 
 from datetime import datetime, timezone
@@ -41,8 +40,10 @@ class SingularityOrchestrator:
             "browser_tests": 0,
             "userscript_tests": 0,
             "vector_demos": 0,
+            "aga_feedbacks": 0,
         }
         self.last_summary: str = ""
+        self.last_aga: Optional[Dict[str, Any]] = None
 
     def run_orchestrated_cycle(self, tasks: List[str] = None) -> List[Dict[str, Any]]:
         if tasks is None:
@@ -53,6 +54,7 @@ class SingularityOrchestrator:
                 "chaos_resilience_test",
                 "browser_userscript_test",
                 "vector_demo",
+                "aga_feedback",
                 "fleet_sync",
                 "publish_evolution_report",
             ]
@@ -63,7 +65,7 @@ class SingularityOrchestrator:
                 sample = "class CoreV1: pass  # TODO evolve"
                 self.improver.evolve(
                     sample,
-                    goal="compact + metrics + vectors + multi-repo",
+                    goal="compact + metrics + AGA feedback + multi-repo",
                 )
                 results.append(
                     {
@@ -110,11 +112,8 @@ class SingularityOrchestrator:
                 results.append(
                     {
                         "task": task,
-                        "browser_ok": smoke.get("ok"),
                         "browser_pass_rate": smoke.get("pass_rate"),
                         "userscript_ok": (us.get("validation") or {}).get("ok"),
-                        "browser_summary": self.browser.summary_line(),
-                        "userscript_summary": self.userscript.summary_line(),
                     }
                 )
                 self.metrics["browser_tests"] += 1
@@ -125,13 +124,26 @@ class SingularityOrchestrator:
                     {
                         "task": task,
                         "hits": demo.get("hits"),
-                        "top_scores": [h.get("score") for h in (demo.get("top") or [])],
-                        "enable_vectors": demo.get("enable_vectors"),
-                        "embeddings_stored": self.db.metrics.get("embeddings_stored"),
                         "vector_queries": self.db.metrics.get("vector_queries"),
                     }
                 )
                 self.metrics["vector_demos"] += 1
+            elif task == "aga_feedback":
+                ing = self.gh.ingest_aga_feedback(db=self.db)
+                fb = ing.get("feedback") or {}
+                self.last_aga = fb
+                results.append(
+                    {
+                        "task": task,
+                        "status": ing.get("status"),
+                        "aga_runs": fb.get("runs"),
+                        "roi_top_ref": fb.get("roi_top_ref"),
+                        "roi_top_score": fb.get("roi_top_score"),
+                        "fleet_health": fb.get("fleet_last_health"),
+                        "stored_key": ing.get("stored_key"),
+                    }
+                )
+                self.metrics["aga_feedbacks"] += 1
             elif task == "fleet_sync":
                 summary = self.evolution_summary()
                 sync = self.gh.sync_status(
@@ -146,7 +158,6 @@ class SingularityOrchestrator:
                         "task": task,
                         "sync": sync.get("status"),
                         "targets": sync.get("targets"),
-                        "gh_metrics": self.gh.get_metrics(),
                     }
                 )
                 self.metrics["fleet_syncs"] += 1
@@ -154,10 +165,8 @@ class SingularityOrchestrator:
                 summary = self.evolution_summary()
                 extra = {
                     "orchestrator_metrics": self.metrics.copy(),
+                    "aga_feedback": self.last_aga,
                     "db_metrics": self.db.metrics.copy(),
-                    "serendipity": self.serendipity.get_report(),
-                    "browser": self.browser.get_metrics(),
-                    "userscript": self.userscript.get_metrics(),
                     "gh": self.gh.get_metrics(),
                 }
                 pub = self.gh.publish_evolution_report(summary, extra=extra)
@@ -166,7 +175,6 @@ class SingularityOrchestrator:
                         "task": task,
                         "status": pub.get("status"),
                         "results": pub.get("results"),
-                        "evolution_reports": self.gh.metrics.get("evolution_reports", 0),
                     }
                 )
                 self.metrics["evolution_reports"] += 1
@@ -180,35 +188,38 @@ class SingularityOrchestrator:
 
     def evolution_summary(self) -> str:
         h = self.db.get_health_snapshot()
+        aga = self.last_aga or {}
+        aga_bit = ""
+        if aga:
+            aga_bit = (
+                f"aga_runs={aga.get('runs', '?')} "
+                f"roi={aga.get('roi_top_score', '?')}:{aga.get('roi_top_ref', '')} "
+                f"fleet={aga.get('fleet_last_health', '?')} "
+            )
         return (
             f"[{_utc_now()}] cycle={self.cycle_count} "
             f"improvements={self.improver.improvements_made} "
             f"seqs={h.get('sequences', 0)} "
             f"emb={h.get('embeddings', 0)} "
             f"llm={self.db.metrics.get('llm_calls', 0)} "
-            f"learning={self.db.metrics.get('learning_writes', 0)} "
             f"vq={self.db.metrics.get('vector_queries', 0)} "
-            f"vh={self.db.metrics.get('vector_hits', 0)} "
             f"chaos={self.chaos.experiments_run}/{self.chaos.resilience_score:.0f} "
-            f"serendipity={self.serendipity.captures}/{self.serendipity.connections_found}"
-            f"/bridges={self.serendipity.bridges_persisted}"
-            f"/groq={self.serendipity.groq_insights} "
-            f"browser={self.browser.session_metrics.get('smoke_ok', 0)}/{self.browser.session_metrics.get('smoke_fail', 0)} "
-            f"userscript={self.userscript.metrics.get('validated', 0)} "
+            f"serendipity={self.serendipity.captures}/{self.serendipity.connections_found} "
+            f"{aga_bit}"
+            f"aga_ingests={self.gh.metrics.get('aga_ingests', 0)} "
             f"fleet_syncs={self.metrics.get('fleet_syncs', 0)} "
             f"evolution_reports={self.metrics.get('evolution_reports', 0)} "
             f"| {self.improver.learning_summary_line()} "
             f"| {self.chaos.summary_line()} "
-            f"| {self.serendipity.summary_line()} "
-            f"| {self.browser.summary_line()} "
-            f"| {self.userscript.summary_line()}"
+            f"| {self.serendipity.summary_line()}"
         )
 
     def get_status(self) -> Dict[str, Any]:
         return {
-            "version": "0.5.9",
+            "version": "0.5.10",
             "cycles": self.cycle_count,
             "db_health": self.db.get_health_snapshot(),
+            "aga_feedback": self.last_aga,
             "improver_report": self.improver.get_improvement_report(),
             "chaos_report": self.chaos.get_report(),
             "serendipity_report": self.serendipity.get_report(),
@@ -220,4 +231,4 @@ class SingularityOrchestrator:
         }
 
 
-print("SingularityOrchestrator v0.5.9 - Vector demo + browser + fleet + publish")
+print("SingularityOrchestrator v0.5.10 - AGA metrics feedback loop active")
