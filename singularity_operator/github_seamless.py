@@ -1,8 +1,7 @@
-"""GitHubSeamless v0.5.7 - Multi-repo orchestration + auto-publish evolution reports.
+"""GitHubSeamless v0.5.10 - Multi-repo + evolution reports + AGA metrics feedback.
 
-Real API actions where token available. Supports own-repo pushes, fleet status
-sync, catalyst propagation, and structured evolution_summary comments on ROI
-status issues (singularity-operator + autonomous-github-agent).
+Inbound path: pull autonomous-github-agent profile + ROI status signals and
+return a structured metrics payload for EverythingDB / evolution_summary.
 """
 
 from __future__ import annotations
@@ -10,6 +9,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -28,15 +28,17 @@ FLEET_REPOS = [
     "eric847b/modular-hub-modernization",
 ]
 
-# Living ROI / status issues — title prefixes used to locate them
 ROI_STATUS_TARGETS: List[Tuple[str, str]] = [
     ("eric847b/singularity-operator", "🚀 Singularity Operator ROI"),
     ("eric847b/autonomous-github-agent", "🚀 Fleet ROI Catalyst Status"),
 ]
 
+AGA_REPO = "eric847b/autonomous-github-agent"
+AGA_PROFILE_PATH = ".agent_profile.json"
+
 
 class GitHubSeamless:
-    """Seamless GitHub agent with multi-repo fleet + evolution report publish."""
+    """Seamless GitHub agent with multi-repo fleet + AGA feedback ingest."""
 
     def __init__(
         self,
@@ -56,8 +58,10 @@ class GitHubSeamless:
             "cross_repo_syncs": 0,
             "catalyst_propagations": 0,
             "evolution_reports": 0,
+            "aga_ingests": 0,
             "errors": 0,
         }
+        self.last_aga_feedback: Optional[Dict[str, Any]] = None
         self.base = "https://api.github.com"
 
     def _headers(self) -> Dict[str, str]:
@@ -216,20 +220,107 @@ class GitHubSeamless:
                 return issue.get("number")
         return None
 
+    # ------------------------------------------------------------------
+    # AGA → singularity-operator metrics feedback
+    # ------------------------------------------------------------------
+    def fetch_aga_profile(self) -> Dict[str, Any]:
+        """Read autonomous-github-agent .agent_profile.json via Contents API."""
+        o, r = AGA_REPO.split("/", 1)
+        res = self._req("GET", f"/repos/{o}/{r}/contents/{AGA_PROFILE_PATH}")
+        if not res.get("ok"):
+            return {"ok": False, "error": res.get("error") or res.get("status")}
+        data = res["data"]
+        content_b64 = data.get("content") or ""
+        try:
+            raw = base64.b64decode(content_b64.replace("\n", "")).decode()
+            profile = json.loads(raw)
+        except Exception as e:
+            return {"ok": False, "error": f"decode:{e}"}
+        return {"ok": True, "profile": profile, "sha": data.get("sha")}
+
+    def fetch_aga_roi_signals(self, max_comments: int = 5) -> Dict[str, Any]:
+        """Pull latest comments from AGA ROI / fleet status issues as signals."""
+        o, r = AGA_REPO.split("/", 1)
+        signals: List[Dict[str, Any]] = []
+        # Prefer known ROI title prefixes + fleet-status label
+        issue_num = self._find_issue_by_title_prefix(o, r, "🚀 Fleet ROI")
+        if not issue_num:
+            issue_num = self._find_issue_by_title_prefix(o, r, "🚀")
+        if not issue_num:
+            # fallback: open issue # from profile roi_issue_url pattern later
+            return {"ok": True, "issue": None, "signals": []}
+
+        cres = self._req(
+            "GET",
+            f"/repos/{o}/{r}/issues/{issue_num}/comments?per_page={max_comments}&sort=updated&direction=desc",
+        )
+        if cres.get("ok") and isinstance(cres.get("data"), list):
+            for c in cres["data"][:max_comments]:
+                body = c.get("body") or ""
+                signals.append(
+                    {
+                        "id": c.get("id"),
+                        "created_at": c.get("created_at"),
+                        "snippet": body[:240].replace("\n", " "),
+                        "has_json": "```json" in body or body.strip().startswith("{"),
+                    }
+                )
+        return {"ok": True, "issue": issue_num, "signals": signals}
+
+    def ingest_aga_feedback(self, db: Any = None) -> Dict[str, Any]:
+        """Pull AGA profile + ROI signals; optionally store into EverythingDB.
+
+        Returns a compact feedback payload suitable for evolution_summary.
+        """
+        profile_res = self.fetch_aga_profile()
+        signals_res = self.fetch_aga_roi_signals()
+
+        profile = profile_res.get("profile") or {}
+        # Compact metrics slice — highest-signal fields only
+        compact = {
+            "source": AGA_REPO,
+            "at": _utc_now(),
+            "version": profile.get("version"),
+            "runs": profile.get("runs"),
+            "evolution_velocity": profile.get("evolution_velocity"),
+            "roi_catalyst_runs": profile.get("roi_catalyst_runs"),
+            "roi_top_score": profile.get("roi_top_score"),
+            "roi_top_ref": profile.get("roi_top_ref"),
+            "roi_issue_url": profile.get("roi_issue_url"),
+            "fleet_coordinator_runs": profile.get("fleet_coordinator_runs"),
+            "fleet_last_health": profile.get("fleet_last_health"),
+            "fleet_last_summary": profile.get("fleet_last_summary"),
+            "errors": profile.get("errors"),
+            "last_run": profile.get("last_run"),
+            "singularity_progress": (profile.get("singularity_progress") or "")[:160],
+            "roi_signals": signals_res.get("signals") or [],
+            "roi_signal_issue": signals_res.get("issue"),
+            "profile_ok": bool(profile_res.get("ok")),
+            "signals_ok": bool(signals_res.get("ok")),
+        }
+
+        stored_key = None
+        if db is not None and hasattr(db, "add_sequence"):
+            try:
+                stored_key = db.add_sequence(compact, tags="aga:feedback", modality="text")
+            except Exception as e:
+                compact["db_error"] = str(e)[:120]
+
+        self.metrics["aga_ingests"] += 1
+        self.last_aga_feedback = compact
+        return {
+            "status": "ingested" if compact.get("profile_ok") else "partial",
+            "feedback": compact,
+            "stored_key": stored_key,
+            "metrics": self.metrics.copy(),
+        }
+
     def publish_evolution_report(
         self,
         summary: str,
         extra: Optional[Dict[str, Any]] = None,
         targets: Optional[List[Tuple[str, str]]] = None,
     ) -> Dict[str, Any]:
-        """Post a structured evolution_summary comment on living ROI status issues.
-
-        Default targets:
-          - singularity-operator ROI status issue
-          - autonomous-github-agent Fleet ROI Catalyst Status issue
-
-        Creates a minimal status issue if none exists (labeled fleet-status).
-        """
         stamp = _utc_now()
         extra = extra or {}
         lines = [
@@ -250,7 +341,7 @@ class GitHubSeamless:
             lines.append("</details>")
         lines.extend([
             "",
-            f"— Auto-published by **GitHubSeamless v0.5.7** (evolution report)",
+            f"— Auto-published by **GitHubSeamless v0.5.10** (evolution report)",
         ])
         body = "\n".join(lines)
 
@@ -269,7 +360,6 @@ class GitHubSeamless:
                 res = self.comment_on_issue(issue_num, body, owner=o, repo=r)
                 entry = {"repo": full, "action": "comment", "issue": issue_num, **res}
             else:
-                # Fallback: create living status issue then comment is not needed — body is the issue
                 res = self.create_issue(
                     title=f"{prefix} (auto-updated)",
                     body=(
@@ -307,7 +397,7 @@ class GitHubSeamless:
             f"**Cross-repo status sync** from `{self.full_name}`  \n"
             f"**At:** `{stamp}`  \n\n"
             f"{summary}\n\n"
-            f"— GitHubSeamless v0.5.7 multi-repo orchestration"
+            f"— GitHubSeamless v0.5.10 multi-repo orchestration"
         )
 
         for full in targets:
@@ -369,7 +459,7 @@ class GitHubSeamless:
             f"**Source issue:** {source_issue or 'n/a'}  \n"
             f"**At:** `{stamp}`  \n\n"
             f"### Insight\n{insight}\n\n"
-            f"— Auto-generated by GitHubSeamless v0.5.7 (cross-repo catalyst)"
+            f"— Auto-generated by GitHubSeamless v0.5.10 (cross-repo catalyst)"
         )
 
         for full in targets[:3]:
@@ -414,4 +504,4 @@ class GitHubSeamless:
         return self.metrics.copy()
 
 
-print("GitHubSeamless v0.5.7 - Multi-repo + evolution report publish ready")
+print("GitHubSeamless v0.5.10 - AGA metrics feedback loop ready")
