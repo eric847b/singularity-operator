@@ -1,16 +1,12 @@
-# Singularity Operator v0.5.9
+# Singularity Operator v0.5.10
 
-**The ultimate comprehensive self-improving AI system** with EverythingDB (optional vectors), chaos, serendipity, multi-repo fleet orchestration, auto-published evolution reports, browser/userscript self-evo tests, and **zero-dep vector similarity search**.
+**Self-improving AI system** with EverythingDB (vectors), chaos, serendipity, multi-repo fleet orchestration, browser/userscript tests, and a **closed metrics feedback loop from autonomous-github-agent**.
 
-**Mission**: Capture every sequence, complete unknowns, self-evolve, orchestrate multi-AI, act on GitHub.
-
-## What's New in v0.5.9 (Vector / Multi-Modal Sequences)
-- **EverythingDB vectors**: feature-flagged (`enable_vectors=True` by default for the stub).
-- **Zero-dep embeddings**: hashing bag-of-words (dim=64) + cosine similarity — no torch/numpy required.
-- **Modalities**: `text` | `code` | `image_ref` | `audio_ref` | `multi` on sequences.
-- APIs: `similarity_search(query)`, `demo_vector_query(...)`.
-- Metrics: `embeddings_stored`, `vector_queries`, `vector_hits` in health + evolution_summary.
-- Orchestrator task `vector_demo` runs each cycle.
+## What's New in v0.5.10 (AGA → SO Feedback Loop)
+- `GitHubSeamless.fetch_aga_profile()` reads `eric847b/autonomous-github-agent/.agent_profile.json`
+- `fetch_aga_roi_signals()` pulls latest ROI/fleet status issue comments
+- `ingest_aga_feedback(db=...)` stores compact metrics into EverythingDB (`aga:feedback`)
+- Orchestrator task `aga_feedback` each cycle; surfaces `aga_runs`, `roi_top_ref`, `fleet_health` in `evolution_summary`
 
 ## Quick Start
 ```bash
@@ -20,17 +16,18 @@ pip install -e .
 python singularity_operator.py
 ```
 
+Requires `GITHUB_TOKEN` / `GH_FULL_PAT` for live AGA ingest and publish.
+
 ## Core Architecture
-1. **EverythingDB** — Sequences + optional vector index + multi-modal tags.
-2. **SelfImprover** — AI evolution + learning sequences.
-3. **ChaosEngine** / **SerendipityEngine** — Resilience + cross-sequence bridges.
-4. **BrowserAutomation** / **UserscriptGenerator** — Live self-evo tests.
-5. **Orchestrator** — PDCA including `vector_demo` + publish.
-6. **GitHubSeamless** — Fleet sync + ROI evolution report comments.
+1. **EverythingDB** — Sequences + optional vectors + multi-modal tags.
+2. **SelfImprover / Chaos / Serendipity** — Evolution + resilience + bridges.
+3. **BrowserAutomation / UserscriptGenerator** — Live self-evo tests.
+4. **GitHubSeamless** — Fleet sync, evolution report publish, **AGA feedback ingest**.
+5. **Orchestrator** — PDCA including `aga_feedback` + `vector_demo` + publish.
 
 ## Roadmap (Next Highest-Return)
-- AGA Actions → singularity-operator metrics feedback loop.
-- Optional real embedding backend (feature-flagged) when free APIs available.
+- Continuous upgrade cycles from live ROI ranking.
+- Optional real embedding backend (feature-flagged).
 - Deeper Playwright path in CI.
 
-*Current status: v0.5.9 vector similarity operational (zero-dep).*
+*Current status: v0.5.10 AGA metrics feedback loop operational.*
