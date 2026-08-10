@@ -1,17 +1,16 @@
-# Singularity Operator v0.5.8
+# Singularity Operator v0.5.9
 
-**The ultimate comprehensive self-improving AI system** with EverythingDB, chaos, serendipity, multi-repo fleet orchestration, auto-published evolution reports, and a **live browser + userscript self-evo test path**.
+**The ultimate comprehensive self-improving AI system** with EverythingDB (optional vectors), chaos, serendipity, multi-repo fleet orchestration, auto-published evolution reports, browser/userscript self-evo tests, and **zero-dep vector similarity search**.
 
-**Mission**: Capture every sequence, complete unknowns, self-evolve, orchestrate multi-AI, act on GitHub. Accelerate the path to singularity.
+**Mission**: Capture every sequence, complete unknowns, self-evolve, orchestrate multi-AI, act on GitHub.
 
-## What's New in v0.5.8 (Browser + Userscript Self-Evo)
-- **BrowserAutomation**: stdlib HTTP smoke suite against fleet GitHub pages + optional Playwright.
-- **UserscriptGenerator**: production Tampermonkey script generation + structural validation.
-- Orchestrator task `browser_userscript_test` captures results into EverythingDB.
-- Metrics surface in `evolution_summary` and ROI status publish payload.
-
-## What's New in v0.5.7 / v0.5.6
-- Auto-publish evolution reports to ROI status issues; multi-repo fleet sync + catalyst propagation.
+## What's New in v0.5.9 (Vector / Multi-Modal Sequences)
+- **EverythingDB vectors**: feature-flagged (`enable_vectors=True` by default for the stub).
+- **Zero-dep embeddings**: hashing bag-of-words (dim=64) + cosine similarity — no torch/numpy required.
+- **Modalities**: `text` | `code` | `image_ref` | `audio_ref` | `multi` on sequences.
+- APIs: `similarity_search(query)`, `demo_vector_query(...)`.
+- Metrics: `embeddings_stored`, `vector_queries`, `vector_hits` in health + evolution_summary.
+- Orchestrator task `vector_demo` runs each cycle.
 
 ## Quick Start
 ```bash
@@ -21,21 +20,17 @@ pip install -e .
 python singularity_operator.py
 ```
 
-Workflows: `auto-evolve.yml` · `roi-status.yml`.
-
 ## Core Architecture
-1. **EverythingDB** — Universal memory + metrics persist.
+1. **EverythingDB** — Sequences + optional vector index + multi-modal tags.
 2. **SelfImprover** — AI evolution + learning sequences.
-3. **ChaosEngine** — Resilience experiments.
-4. **SerendipityEngine** — Cross-sequence bridges + Groq insights.
-5. **BrowserAutomation** — Live HTTP smoke / optional Playwright.
-6. **UserscriptGenerator** — Tampermonkey generate + validate.
-7. **Orchestrator** — PDCA including browser_userscript_test + publish.
-8. **GitHubSeamless** — Fleet sync + ROI evolution report comments.
+3. **ChaosEngine** / **SerendipityEngine** — Resilience + cross-sequence bridges.
+4. **BrowserAutomation** / **UserscriptGenerator** — Live self-evo tests.
+5. **Orchestrator** — PDCA including `vector_demo` + publish.
+6. **GitHubSeamless** — Fleet sync + ROI evolution report comments.
 
 ## Roadmap (Next Highest-Return)
-- Optional vector / multi-modal sequences in EverythingDB.
 - AGA Actions → singularity-operator metrics feedback loop.
-- Deeper Playwright path when available in CI.
+- Optional real embedding backend (feature-flagged) when free APIs available.
+- Deeper Playwright path in CI.
 
-*Current status: v0.5.8 browser + userscript live self-evo operational.*
+*Current status: v0.5.9 vector similarity operational (zero-dep).*
