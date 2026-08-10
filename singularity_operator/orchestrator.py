@@ -1,4 +1,4 @@
-"""SingularityOrchestrator v0.5.4 - PDCA cycles with chaos + serendipity.
+"""SingularityOrchestrator v0.5.5 - PDCA cycles with chaos + deeper serendipity.
 
 Coordinates EverythingDB, SelfImprover, ChaosEngine, SerendipityEngine, GitHubSeamless.
 Emits evolution_summary for ROI status after each cycle.
@@ -63,12 +63,14 @@ class SingularityOrchestrator:
                 seqs = self.db.propose_unknown("singularity acceleration", 3)
                 results.append({"task": task, "sequences": seqs[:2]})
             elif task == "serendipity_cycle":
-                ser = self.serendipity.run_cycle(connections=3, amplifications=2)
+                ser = self.serendipity.run_cycle(connections=4, amplifications=3, deep=True)
                 results.append(
                     {
                         "task": task,
                         "captures": ser["captures"],
                         "connections": ser["connections_found"],
+                        "bridges": ser.get("bridges_persisted", 0),
+                        "groq_insights": ser.get("groq_insights", 0),
                         "summary": self.serendipity.summary_line(),
                     }
                 )
@@ -101,7 +103,9 @@ class SingularityOrchestrator:
             f"llm={self.db.metrics.get('llm_calls', 0)} "
             f"learning={self.db.metrics.get('learning_writes', 0)} "
             f"chaos={self.chaos.experiments_run}/{self.chaos.resilience_score:.0f} "
-            f"serendipity={self.serendipity.captures}/{self.serendipity.connections_found} "
+            f"serendipity={self.serendipity.captures}/{self.serendipity.connections_found}"
+            f"/bridges={self.serendipity.bridges_persisted}"
+            f"/groq={self.serendipity.groq_insights} "
             f"| {self.improver.learning_summary_line()} "
             f"| {self.chaos.summary_line()} "
             f"| {self.serendipity.summary_line()}"
@@ -109,7 +113,7 @@ class SingularityOrchestrator:
 
     def get_status(self) -> Dict[str, Any]:
         return {
-            "version": "0.5.4",
+            "version": "0.5.5",
             "cycles": self.cycle_count,
             "db_health": self.db.get_health_snapshot(),
             "improver_report": self.improver.get_improvement_report(),
@@ -120,4 +124,4 @@ class SingularityOrchestrator:
         }
 
 
-print("SingularityOrchestrator v0.5.4 - Cycles + chaos + serendipity + evolution summary")
+print("SingularityOrchestrator v0.5.5 - Cycles + chaos + deeper serendipity + evolution summary")
