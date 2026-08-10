@@ -1,11 +1,9 @@
-"""Singularity Operator v0.5.9 - Ultimate self-improving AI system.
-EverythingDB (optional vectors) + SelfImprover + ChaosEngine + SerendipityEngine +
-Orchestration + GitHubSeamless + BrowserAutomation + UserscriptGenerator.
+"""Singularity Operator v0.5.10 - Ultimate self-improving AI system.
 
-v0.5.9: Optional zero-dep vector similarity + multi-modal tags in EverythingDB.
-v0.5.8: Browser smoke + userscript generate/validate live self-evo test path.
-v0.5.7: Auto-publish evolution_summary comments to ROI status issues.
-v0.5.6: Multi-repo fleet orchestration.
+v0.5.10: AGA Actions → singularity-operator metrics feedback loop.
+v0.5.9: Optional zero-dep vector similarity + multi-modal tags.
+v0.5.8: Browser + userscript live self-evo test path.
+v0.5.7: Auto-publish evolution reports to ROI status issues.
 """
 
 from .everything_db import EverythingDB
@@ -18,7 +16,7 @@ from .serendipity_engine import SerendipityEngine
 from .browser_automation import BrowserAutomation
 from .userscript_gen import UserscriptGenerator
 
-__version__ = "0.5.9"
+__version__ = "0.5.10"
 __all__ = [
     "EverythingDB",
     "SelfImprover",
