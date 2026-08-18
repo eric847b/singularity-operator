@@ -1,0 +1,140 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.5.12). Leave empty to use github.ref_name."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies + PyInstaller
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build single-file Windows executable
+        shell: bash
+        run: |
+          mkdir -p dist
+          # Main launcher
+          pyinstaller --onefile --console --name singularity-operator --clean \
+            --hidden-import=singularity_operator \
+            --collect-submodules=singularity_operator \
+            singularity_operator.py
+          # Optional secondary entry points
+          if [ -f groq_singularity.py ]; then
+            pyinstaller --onefile --console --name singularity-groq --clean \
+              --hidden-import=singularity_operator \
+              --collect-submodules=singularity_operator \
+              groq_singularity.py || true
+          fi
+          ls -la dist/
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-binaries
+          path: dist/*.exe
+
+  build-sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist + wheel
+        run: |
+          pip install build
+          python -m build
+          ls -la dist/
+
+      - name: Upload Python packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-packages
+          path: dist/*
+
+  release:
+    needs: [build-windows, build-sdist]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Windows binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-binaries
+          path: release-assets
+
+      - name: Download Python packages
+        uses: actions/download-artifact@v4
+        with:
+          name: python-packages
+          path: release-assets
+
+      - name: Determine tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Singularity Operator ${{ steps.tag.outputs.tag }}
+          body: |
+            ## Singularity Operator ${{ steps.tag.outputs.tag }}
+
+            Self-improving AI system with EverythingDB, fleet orchestration, and continuous ROI ranking.
+
+            ### Windows single-file executable
+            - `singularity-operator.exe` — main launcher (no separate Python install required)
+            - Optional: `singularity-groq.exe` if present
+
+            Set env vars as needed:
+            ```
+            GROQ_API_KEY=...
+            GITHUB_TOKEN=...   # or GH_FULL_PAT
+            ```
+
+            ### Python package
+            Install from the attached wheel/sdist, or:
+            ```bash
+pip install -e .
+python singularity_operator.py
+            ```
+
+            See README for architecture and roadmap.
+          files: |
+            release-assets/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
