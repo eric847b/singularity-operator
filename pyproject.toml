@@ -4,15 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "singularity-operator"
-version = "0.2.1"
-description = "Ultimate self-improving AI (Singularity Operator v0.2.1): EverythingDB + SelfImprover + Orchestrator + GroqClient (auto-iter) + BrowserAutomation hooks. Groq LPU, transistor caching, autonomous loops, userscript gen, swarm. All steps implemented."
+version = "0.5.11"
+description = "Ultimate self-improving AI (Singularity Operator): EverythingDB + SelfImprover + Orchestrator + GroqClient + BrowserAutomation + continuous ROI ranking."
 authors = [{name = "Eric (Mufnluvn)"}]
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["requests", "groq"]
+license = { text = "MIT" }
+dependencies = ["requests>=2.31.0,<3", "groq>=0.9.0"]
 
 [project.optional-dependencies]
 test = ["pytest"]
+
+[project.scripts]
+singularity-operator = "singularity_operator:main"
+
+[project.urls]
+Homepage = "https://github.com/eric847b/singularity-operator"
+Repository = "https://github.com/eric847b/singularity-operator"
 
 [tool.setuptools.packages.find]
 where = ["."]
