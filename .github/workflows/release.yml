@@ -126,8 +126,8 @@ jobs:
             ### Python package
             Install from the attached wheel/sdist, or:
             ```bash
-pip install -e .
-python singularity_operator.py
+            pip install -e .
+            python singularity_operator.py
             ```
 
             See README for architecture and roadmap.
