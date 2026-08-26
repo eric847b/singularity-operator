@@ -1,4 +1,4 @@
-"""Singularity Operator v0.5.10 Launcher — full cycle including AGA feedback.
+"""Singularity Operator v0.5.12 Launcher — full cycle including AGA feedback.
 """
 
 import os
@@ -17,7 +17,7 @@ from singularity_operator import (
 
 
 def main():
-    print("=== Singularity Operator v0.5.10 ===")
+    print("=== Singularity Operator v0.5.12 ===")
     print(f"Time: {datetime.now().isoformat()}")
     print(f"Groq key present: {bool(os.getenv('GROQ_API_KEY'))}")
     print(f"GitHub token present: {bool(os.getenv('GITHUB_TOKEN') or os.getenv('GH_FULL_PAT'))}")
@@ -33,7 +33,7 @@ def main():
 
     print("\n[1] Propose + evolve...")
     db.propose_unknown("core self-improvement + singularity", 3)
-    improver.evolve("def core_v1(): return 'v1'", goal="compact + AGA feedback v0.5.10")
+    improver.evolve("def core_v1(): return 'v1'", goal="compact + AGA feedback v0.5.12")
 
     print("\n[2] Vector demo...")
     demo = db.demo_vector_query("self improve serendipity singularity")
@@ -59,7 +59,7 @@ def main():
     print("Cycle tasks:", [r.get("task") for r in cycle_results])
     print("Summary:", orch.evolution_summary())
 
-    print("\n=== v0.5.10 complete. AGA feedback loop operational. ===")
+    print("\n=== v0.5.12 complete. AGA feedback loop operational. ===")
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "singularity-operator"
-version = "0.5.11"
+version = "0.5.12"
 description = "Ultimate self-improving AI (Singularity Operator): EverythingDB + SelfImprover + Orchestrator + GroqClient + BrowserAutomation + continuous ROI ranking."
 authors = [{name = "Eric (Mufnluvn)"}]
 readme = "README.md"
