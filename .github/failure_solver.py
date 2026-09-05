@@ -1,7 +1,7 @@
 """
 Proactive Runtime Failure Solver for Autonomous GitHub Agent.
 Detects, classifies, and remediates (or proposes) runtime failures of all common types.
-v3.4.0 — highest-ROI self-healing catalyst.
+v3.5.0 — improved Dependabot / YAML parse classification.
 """
 
 from __future__ import annotations
@@ -19,6 +19,8 @@ import requests
 # Patterns that indicate specific failure classes (ordered by specificity)
 FAILURE_PATTERNS: List[Tuple[str, str, float]] = [
     # (regex, class_name, base_score)
+    # High-priority Dependabot / config parse failures (must come before generic git)
+    (r"dependency_file_not_parseable|not parseable|Failed to parse.*workflow|updater encountered one or more errors", "yaml", 92.0),
     (r"ModuleNotFoundError|No module named|ImportError", "missing_dependency", 90.0),
     (r"pip install.*failed|Could not find a version that satisfies", "pip_resolution", 85.0),
     (r"Timeout|timed out|Read timed out|ConnectTimeout", "timeout", 80.0),
@@ -98,9 +100,9 @@ COMMON_REMEDIATIONS: Dict[str, Dict[str, Any]] = {
         "example_fix": "Clean caches, artifacts, and large logs early in the job.",
     },
     "yaml": {
-        "description": "Invalid YAML in workflow or config",
+        "description": "Invalid or unparseable YAML / workflow / Dependabot config",
         "safe_actions": ["create_issue"],
-        "example_fix": "Validate YAML with yamllint; fix indentation/anchors.",
+        "example_fix": "Validate YAML indentation (especially multiline blocks); fix Dependabot-unparseable workflow files; run yamllint.",
     },
     "network": {
         "description": "Transient network failure",
@@ -284,7 +286,7 @@ class FailureSolver:
         body_lines.extend([
             "",
             "---",
-            "Auto-created by **FailureSolver v3.4.0** (proactive runtime failure catalyst).",
+            "Auto-created by **FailureSolver v3.5.0** (proactive runtime failure catalyst).",
             "Highest-ROI self-healing path. Safe: issue only, no destructive actions.",
         ])
         body = "\n".join(body_lines)
