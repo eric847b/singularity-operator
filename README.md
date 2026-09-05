@@ -1,4 +1,4 @@
-# Singularity Operator v0.5.11
+# Singularity Operator v0.5.12
 
 **Self-improving AI system** with EverythingDB, fleet orchestration, AGA metrics feedback, and **continuous upgrade from live ROI ranking**.
 
@@ -22,6 +22,11 @@ git push origin v0.5.12
 ```
 GitHub Actions builds the EXE + packages and publishes the release automatically.
 
+## What's New in v0.5.12
+- Fixed Dependabot parse failure on `release.yml` (inconsistent YAML indentation in multiline body block).
+- Version strings synchronized across VERSION, pyproject.toml, launcher, and README.
+- Release workflow is now fully Dependabot-compatible; next github-actions update should succeed.
+
 ## What's New in v0.5.11
 - Orchestrator task `continuous_roi_rank` records AGA `roi_top_ref` / score into EverythingDB each cycle.
 - **SO#9 closed** with real cross-repo currency work: OSS/Maintainer niche on `zero-cost-wealth-playbook-tool`.
@@ -42,4 +47,4 @@ EverythingDB · SelfImprover · Chaos · Serendipity · Browser · Userscript ·
 - Next live-ranked catalyst work after empty queue / new seeds.
 - Optional real embedding backend (feature-flagged).
 
-*Status: v0.5.11 continuous ROI ranking operational. SO#9 closed via currency cross-repo proof. Release packaging added.*
+*Status: v0.5.12 continuous upgrade. Release packaging fixed and version-synced. Ready for tag.*
