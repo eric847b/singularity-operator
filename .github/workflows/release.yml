@@ -18,10 +18,10 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -49,7 +49,7 @@ jobs:
           ls -la dist/
 
       - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-binaries
           path: dist/*.exe
@@ -57,10 +57,10 @@ jobs:
   build-sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -71,7 +71,7 @@ jobs:
           ls -la dist/
 
       - name: Upload Python packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: python-packages
           path: dist/*
@@ -80,16 +80,16 @@ jobs:
     needs: [build-windows, build-sdist]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Download Windows binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: windows-binaries
           path: release-assets
 
       - name: Download Python packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: python-packages
           path: release-assets
@@ -104,7 +104,7 @@ jobs:
           fi
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: Singularity Operator ${{ steps.tag.outputs.tag }}
