@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Verify release metadata
+      - name: Verify release metadata and runtime
         shell: bash
         run: |
           set -euo pipefail
@@ -29,5 +29,10 @@ jobs:
           assert re.search(r'^version\s*=\s*"'+re.escape(v)+r'"\s*$',p,re.M),v
           r=Path('README.md').read_text()
           assert re.search(r'v'+re.escape(v)+r'\b',r),v
-          print(f'Version metadata consistent: {v}')
+          i=Path('singularity_operator/__init__.py').read_text()
+          assert re.search(r'^__version__\s*=\s*"'+re.escape(v)+r'"\s*$',i,re.M),v
+          l=Path('singularity_operator.py').read_text()
+          assert 'from singularity_operator import (' in l and '__version__' in l,l
+          assert 'v{__version__}' in l,l
+          print(f'Version metadata/runtime consistent: {v}')
           PY
