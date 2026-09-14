@@ -1,4 +1,4 @@
-# Singularity Operator v0.5.12
+# Singularity Operator v0.5.13
 
 **Self-improving AI system** with EverythingDB, fleet orchestration, AGA metrics feedback, and **continuous upgrade from live ROI ranking**.
 
@@ -15,12 +15,17 @@ GROQ_API_KEY=...
 GITHUB_TOKEN=...   # or GH_FULL_PAT
 ```
 
-To cut a new release after this packaging lands:
+To cut a new release after packaging changes land:
 ```bash
-git tag v0.5.12
-git push origin v0.5.12
+git tag v0.5.13
+git push origin v0.5.13
 ```
 GitHub Actions builds the EXE + packages and publishes the release automatically.
+
+## What's New in v0.5.13
+- Version level advanced and synchronized across the canonical `VERSION` and Python package metadata.
+- Release documentation advanced with the current executable/package release target.
+- Continuous-upgrade architecture remains focused on measurable ROI and cross-repo fleet improvement.
 
 ## What's New in v0.5.12
 - Fixed Dependabot parse failure on `release.yml` (inconsistent YAML indentation in multiline body block).
@@ -46,5 +51,6 @@ EverythingDB · SelfImprover · Chaos · Serendipity · Browser · Userscript ·
 ## Roadmap
 - Next live-ranked catalyst work after empty queue / new seeds.
 - Optional real embedding backend (feature-flagged).
+- Keep release metadata synchronized automatically before every versioned release.
 
-*Status: v0.5.12 continuous upgrade. Release packaging fixed and version-synced. Ready for tag.*
+*Status: v0.5.13 continuous upgrade. Version metadata synchronized. Ready for release workflow/tag.*
