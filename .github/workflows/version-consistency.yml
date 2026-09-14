@@ -1,0 +1,33 @@
+name: Version Consistency
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          v=$(tr -d '[:space:]' < VERSION)
+          test -n "$v"
+          python - <<'PY' "$v"
+          import re,sys
+          from pathlib import Path
+          v=sys.argv[1]
+          assert re.fullmatch(r'\d+\.\d+\.\d+',v),v
+          p=Path('pyproject.toml').read_text()
+          assert re.search(r'^version\s*=\s*"'+re.escape(v)+r'"\s*$',p,re.M),v
+          r=Path('README.md').read_text()
+          assert re.search(r'v'+re.escape(v)+r'\b',r),v
+          print(f'Version metadata consistent: {v}')
+          PY
