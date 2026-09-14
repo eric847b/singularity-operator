@@ -1,5 +1,6 @@
-"""Singularity Operator v0.5.11 - Ultimate self-improving AI system.
+"""Singularity Operator v0.5.13 - Ultimate self-improving AI system.
 
+v0.5.13: Release metadata and runtime version synchronized.
 v0.5.11: Continuous upgrade from live ROI ranking (AGA roi_top_ref).
 v0.5.10: AGA Actions → singularity-operator metrics feedback loop.
 v0.5.9: Optional zero-dep vector similarity + multi-modal tags.
@@ -15,7 +16,7 @@ from .serendipity_engine import SerendipityEngine
 from .browser_automation import BrowserAutomation
 from .userscript_gen import UserscriptGenerator
 
-__version__ = "0.5.11"
+__version__ = "0.5.13"
 __all__ = [
     "EverythingDB",
     "SelfImprover",
