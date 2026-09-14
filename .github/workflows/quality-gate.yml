@@ -36,6 +36,7 @@ jobs:
           ast.parse(t)
           assert 'ast.parse(candidate)' in t
           assert 'candidate == code_snippet.strip()' in t
+          assert 'ast.dump(candidate_tree' in t
           o=Path('singularity_operator/orchestrator.py').read_text()
           ast.parse(o)
           assert 'actual = self.improver.improvements_made - before' in o
