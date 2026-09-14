@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to release (e.g. v0.5.12). Leave empty to use github.ref_name."
+        description: "Tag to release (e.g. v0.5.13). Leave empty to use github.ref_name."
         required: false
         default: ""
 
@@ -15,7 +15,31 @@ permissions:
   contents: write
 
 jobs:
+  verify-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify release version
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          REF_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          v=$(tr -d '[:space:]' < VERSION)
+          test -n "$v"
+          test "$(python - <<'PY'
+          import pathlib,re
+          s=pathlib.Path('pyproject.toml').read_text()
+          m=re.search(r'^version\s*=\s*"([^"]+)"',s,re.M)
+          print(m.group(1) if m else '')
+          PY
+          )" = "$v"
+          tag="${INPUT_TAG:-$REF_TAG}"
+          test "$tag" = "v$v"
+          echo "release version: $v"
+
   build-windows:
+    needs: verify-version
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
@@ -34,12 +58,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          # Main launcher
           pyinstaller --onefile --console --name singularity-operator --clean \
             --hidden-import=singularity_operator \
             --collect-submodules=singularity_operator \
             singularity_operator.py
-          # Optional secondary entry points
           if [ -f groq_singularity.py ]; then
             pyinstaller --onefile --console --name singularity-groq --clean \
               --hidden-import=singularity_operator \
@@ -55,6 +77,7 @@ jobs:
           path: dist/*.exe
 
   build-sdist:
+    needs: verify-version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -77,7 +100,7 @@ jobs:
           path: dist/*
 
   release:
-    needs: [build-windows, build-sdist]
+    needs: [verify-version, build-windows, build-sdist]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
