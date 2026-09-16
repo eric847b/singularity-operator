@@ -5,24 +5,31 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+      time: "06:00"
     open-pull-requests-limit: 5
+    rebase-strategy: "auto"
     groups:
       python-dependencies:
         patterns: ["*"]
         update-types: ["minor", "patch"]
-    labels: ["dependencies", "automated"]
+    labels: ["dependencies", "python", "dependabot-coord", "automated"]
     commit-message:
       prefix: "chore(deps)"
+      include: "scope"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
+      time: "06:00"
     open-pull-requests-limit: 5
+    rebase-strategy: "auto"
     groups:
       github-actions:
         patterns: ["*"]
-    labels: ["dependencies", "github-actions", "automated"]
+        update-types: ["minor", "patch"]
+    labels: ["dependencies", "github-actions", "dependabot-coord", "automated"]
     commit-message:
       prefix: "chore(actions)"
+      include: "scope"
