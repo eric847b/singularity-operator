@@ -20,6 +20,12 @@ class SelfImprover:
         self.evolution_log: list = []
 
     def evolve(self, code_snippet: str, goal: str = "max compactness + self-evolve + resilience") -> str:
+        """
+        Evolve a code snippet using AI to meet the specified goal.  The returned value
+        is the improved snippet (or the original if the AI produced no meaningful
+        change).  The method logs any changes or failures and persists successful
+        improvements to the local ``EverythingDB`` instance.
+        """
         prompt = f"""Analyze this code snippet and propose a compact improved version for goal: {goal}.
 Focus on: efficiency, self-improvement hooks, error resilience, metrics. Return ONLY the improved Python code. Keep structure.
 
@@ -35,7 +41,8 @@ CODE:
                 return code_snippet
             original_tree = ast.parse(code_snippet)
             candidate_tree = ast.parse(candidate)
-            if candidate == code_snippet.strip() or ast.dump(candidate_tree, include_attributes=False) == ast.dump(original_tree, include_attributes=False):
+            # Compare abstract syntax trees: if the trees are identical, the snippet hasn't changed.
+            if ast.dump(candidate_tree, include_attributes=False) == ast.dump(original_tree, include_attributes=False):
                 self.evolution_log.append({"goal": goal, "timestamp": _utc_now(), "ok": False, "reason": "no_change"})
                 return code_snippet
             improved = candidate
@@ -46,7 +53,7 @@ CODE:
             self.db.metrics["learning_writes"] = self.db.metrics.get("learning_writes", 0) + 1
             print(f"SelfImprover v0.5.4: Applied evolution #{self.improvements_made} for {goal}")
             return improved
-        except Exception as e:
+        except Exception as e:  # Covers AST parsing, AI call, or DB persistence failures
             self.failures += 1
             self.evolution_log.append({"goal": goal, "timestamp": _utc_now(), "ok": False, "error": str(e)[:120]})
             print(f"SelfImprover v0.5.4: evolution rejected ({e}); keeping original")
