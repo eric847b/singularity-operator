@@ -35,7 +35,9 @@ jobs:
           t=p.read_text()
           ast.parse(t)
           assert 'ast.parse(candidate)' in t
-          assert 'candidate == code_snippet.strip()' in t
+          # No-change rejection is AST-based (whitespace-insensitive tree comparison),
+          # not a string strip comparison — check the property, not the literal form
+          assert 'ast.dump(original_tree' in t
           assert 'ast.dump(candidate_tree' in t
           o=Path('singularity_operator/orchestrator.py').read_text()
           ast.parse(o)
