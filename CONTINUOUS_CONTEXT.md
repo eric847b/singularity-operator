@@ -1,11 +1,11 @@
 # Continuous Free-AI Context & Roadmap
 
-**Last updated:** 2026-10-14  
+**Last updated:** 2026-10-15  
 **Purpose:** Keep free AIs (local + Pollinations no-key + free tiers) fully context-aware and connected to everything they need while they add software and fix things continuously.
 
 ## Fleet (always in scope)
 - `eric847b/AI-Collaboration-Hub` — FreeAIRotator v25.1 (Node + userscript)
-- `eric847b/singularity-operator` — FreeAIClient + Auto-Evolve (this repo)
+- `eric847b/singularity-operator` — FreeAIClient + Auto-Evolve (this repo) — v0.5.14 active, Auto-Evolve just dispatched
 - `eric847b/autonomous-github-agent` — free_ai_helper + Catalyst Core v1.3
 
 ## Free AI Pool (never pause)
@@ -30,11 +30,19 @@ Roadmap focus: [current top items]. Use free AI only. Keep context of all connec
 You are the free-AI continuous refinement engine. Context: full fleet + last Auto-Evolve + FreeAIRotator state. Your choice: add new software or fix existing while everything keeps running. Never pause. Zero extra cost. Maximum functional iteration.
 ```
 
-## Current High-ROI Themes
+## Current High-ROI Themes (2026-10-15)
+- **Top human-gated action:** Re-enable disabled workflows in autonomous-github-agent (Fleet Maintenance, Telemetry Intake, Autonomous GitHub Agent, Fleet Ops, etc.). Agent cannot enable them; requires one-time UI or gh action.
 - Expand free AI capacity and reliability
 - Keep continuous loops (Auto-Evolve, Catalyst, workspace `npm run ai`) never-pausing
 - Version / docs / ROI ranking hygiene
 - Real measurable progress only (no simulated work)
+
+## Immediate Catalyst (Human)
+1. Go to https://github.com/eric847b/autonomous-github-agent/actions
+2. Enable **Fleet Maintenance** (and Telemetry Intake)
+3. Then run: `gh workflow run "Fleet Maintenance" --repo eric847b/autonomous-github-agent`
+
+This restores the highest-leverage scheduled self-heal path for the entire fleet.
 
 ## How free AIs stay connected
 - Shared free provider pool across the three core repos
