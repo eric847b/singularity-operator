@@ -1,5 +1,6 @@
-"""Singularity Operator v0.5.14 - Ultimate self-improving AI system.
+"""Singularity Operator v0.5.15 - Ultimate self-improving AI system.
 
+v0.5.15: Continuous upgrade cycle — launcher synced, SelfImprover prefers free AI rotator, all version metadata aligned for measurable ROI progress.
 v0.5.14: Free AI rotator (local + Pollinations no-key + free tiers) fully integrated for zero-cost continuous refinement.
 v0.5.13: Release metadata and runtime version synchronized.
 v0.5.11: Continuous upgrade from live ROI ranking (AGA roi_top_ref).
@@ -18,7 +19,7 @@ from .serendipity_engine import SerendipityEngine
 from .browser_automation import BrowserAutomation
 from .userscript_gen import UserscriptGenerator
 
-__version__ = "0.5.14"
+__version__ = "0.5.15"
 __all__ = [
     "EverythingDB",
     "SelfImprover",

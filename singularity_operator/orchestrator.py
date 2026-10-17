@@ -1,4 +1,4 @@
-"""SingularityOrchestrator v0.5.14 - Continuous upgrade from live ROI ranking + free AI context.
+"""SingularityOrchestrator v0.5.15 - Continuous upgrade from live ROI ranking + free AI context.
 
 Uses AGA-fed roi_top_ref after aga_feedback; records ranked target into EverythingDB.
 Cross-repo currency path proven via zero-cost-wealth OSS niche (SO#9).
@@ -153,7 +153,7 @@ class SingularityOrchestrator:
         return (f"[{_utc_now()}] cycle={self.cycle_count} improvements={self.improver.improvements_made} seqs={h.get('sequences', 0)} emb={h.get('embeddings', 0)} llm={self.db.metrics.get('llm_calls', 0)} chaos={self.chaos.experiments_run}/{self.chaos.resilience_score:.0f} serendipity={self.serendipity.captures}/{self.serendipity.connections_found} {aga_bit}roi_ranks={self.metrics.get('roi_ranks', 0)} aga_ingests={self.gh.metrics.get('aga_ingests', 0)} fleet_syncs={self.metrics.get('fleet_syncs', 0)} | {self.improver.learning_summary_line()} | {self.chaos.summary_line()} | {self.serendipity.summary_line()}")
 
     def get_status(self) -> Dict[str, Any]:
-        return {"version": "0.5.14", "cycles": self.cycle_count, "db_health": self.db.get_health_snapshot(), "aga_feedback": self.last_aga, "roi_pick": self.last_roi_pick, "metrics": self.metrics, "gh_metrics": self.gh.get_metrics(), "last_summary": self.last_summary or self.evolution_summary()}
+        return {"version": "0.5.15", "cycles": self.cycle_count, "db_health": self.db.get_health_snapshot(), "aga_feedback": self.last_aga, "roi_pick": self.last_roi_pick, "metrics": self.metrics, "gh_metrics": self.gh.get_metrics(), "last_summary": self.last_summary or self.evolution_summary()}
 
 
-print("SingularityOrchestrator v0.5.14 - Continuous ROI ranking + free AI context active")
+print("SingularityOrchestrator v0.5.15 - Continuous ROI ranking + free AI context active")

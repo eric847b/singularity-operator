@@ -1,4 +1,4 @@
-"""SelfImprover v0.5.4 - AI-driven evolution with validation and persistence."""
+"""SelfImprover v0.5.15 - AI-driven evolution with free-AI primary path, validation and persistence."""
 
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
@@ -19,51 +19,63 @@ class SelfImprover:
         self.failures = 0
         self.evolution_log: list = []
 
-    def evolve(self, code_snippet: str, goal: str = "max compactness + self-evolve + resilience") -> str:
+    def evolve(self, code_snippet: str, goal: str = "max compactness + self-evolve + resilience + free AI") -> str:
         """
-        Evolve a code snippet using AI to meet the specified goal.  The returned value
-        is the improved snippet (or the original if the AI produced no meaningful
-        change).  The method logs any changes or failures and persists successful
-        improvements to the local ``EverythingDB`` instance.
+        Evolve a code snippet using free AI rotator first (local + Pollinations no-key + free tiers).
+        Returns improved snippet or original if no meaningful change. Logs + persists to EverythingDB.
         """
         prompt = f"""Analyze this code snippet and propose a compact improved version for goal: {goal}.
-Focus on: efficiency, self-improvement hooks, error resilience, metrics. Return ONLY the improved Python code. Keep structure.
+Focus on: efficiency, self-improvement hooks, error resilience, metrics, free-AI readiness. Return ONLY the improved Python code. Keep structure.
 
 CODE:
 {code_snippet[:1500]}
 """
         try:
-            result = call_ai(prompt, provider="groq")
+            # Free AI rotator is primary (no hard provider lock)
+            result = call_ai(prompt)
             resp = result.get("response", "") if isinstance(result, dict) else ""
             candidate = resp.strip()
             if not candidate:
-                self.evolution_log.append({"goal": goal, "timestamp": _utc_now(), "ok": False, "reason": "empty"})
+                self.evolution_log.append({"goal": goal, "timestamp": _utc_now(), "ok": False, "reason": "empty", "provider": result.get("provider")})
                 return code_snippet
             original_tree = ast.parse(code_snippet)
             candidate_tree = ast.parse(candidate)
-            # Compare abstract syntax trees: if the trees are identical, the snippet hasn't changed.
             if ast.dump(candidate_tree, include_attributes=False) == ast.dump(original_tree, include_attributes=False):
-                self.evolution_log.append({"goal": goal, "timestamp": _utc_now(), "ok": False, "reason": "no_change"})
+                self.evolution_log.append({"goal": goal, "timestamp": _utc_now(), "ok": False, "reason": "no_change", "provider": result.get("provider")})
                 return code_snippet
             improved = candidate
             self.improvements_made += 1
-            entry = {"goal": goal, "timestamp": _utc_now(), "delta": len(improved) - len(code_snippet), "ok": True}
+            entry = {
+                "goal": goal,
+                "timestamp": _utc_now(),
+                "delta": len(improved) - len(code_snippet),
+                "ok": True,
+                "provider": result.get("provider"),
+            }
             self.evolution_log.append(entry)
-            self.db.add_sequence({"evolution": goal, "improvement_preview": improved[:200], "delta": entry["delta"]}, "self_improver")
+            self.db.add_sequence(
+                {"evolution": goal, "improvement_preview": improved[:200], "delta": entry["delta"], "provider": entry.get("provider")},
+                "self_improver",
+            )
             self.db.metrics["learning_writes"] = self.db.metrics.get("learning_writes", 0) + 1
-            print(f"SelfImprover v0.5.4: Applied evolution #{self.improvements_made} for {goal}")
+            print(f"SelfImprover v0.5.15: Applied evolution #{self.improvements_made} via {entry.get('provider')} for {goal}")
             return improved
-        except Exception as e:  # Covers AST parsing, AI call, or DB persistence failures
+        except Exception as e:
             self.failures += 1
             self.evolution_log.append({"goal": goal, "timestamp": _utc_now(), "ok": False, "error": str(e)[:120]})
-            print(f"SelfImprover v0.5.4: evolution rejected ({e}); keeping original")
+            print(f"SelfImprover v0.5.15: evolution rejected ({e}); keeping original")
             return code_snippet
 
     def get_improvement_report(self) -> Dict[str, Any]:
-        return {"improvements_made": self.improvements_made, "failures": self.failures, "log": self.evolution_log[-5:], "db_metrics": self.db.compute_metrics()}
+        return {
+            "improvements_made": self.improvements_made,
+            "failures": self.failures,
+            "log": self.evolution_log[-5:],
+            "db_metrics": self.db.compute_metrics(),
+        }
 
     def learning_summary_line(self) -> str:
         return f"SelfImprover: improvements={self.improvements_made} failures={self.failures} learning_writes={self.db.metrics.get('learning_writes', 0)}"
 
 
-print("SelfImprover v0.5.4 - Validated AI evolution active")
+print("SelfImprover v0.5.15 - Free-AI primary validated evolution active")
