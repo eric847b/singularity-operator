@@ -1,6 +1,6 @@
 """
 Singularity Operator — ROI status + auto-seed next evolution cycle.
-v0.5.11 — Advances roadmap seeds (does not re-open completed work).
+v0.5.15 — Advances roadmap seeds (does not re-open completed work). Aware of free-AI primary SelfImprover.
 Living status issue. Draft/issue only. No force-merge. Stdlib + requests.
 """
 from __future__ import annotations
@@ -15,12 +15,12 @@ import requests
 
 HOST_REPO = os.getenv("GITHUB_REPOSITORY", "eric847b/singularity-operator")
 STATUS_TITLE = "🚀 Singularity Operator ROI / Evolution Status (auto-updated)"
-VERSION = "0.5.11"
+VERSION = "0.5.15"
 
 CURRENCY_KW = ("revenue", "payment", "cash", "wallet", "monetize", "wealth", "profit")
 CAPABILITY_KW = (
     "evolve", "self-improve", "everythingdb", "singularity", "unlock",
-    "orchestrator", "serendipity", "chaos", "browser", "userscript", "vector", "aga",
+    "orchestrator", "serendipity", "chaos", "browser", "userscript", "vector", "aga", "free-ai",
 )
 CONFLICT_KW = ("blocker", "stuck", "deadlock", "conflict", "priority", "decision")
 
@@ -28,10 +28,10 @@ ROADMAP_SEEDS = [
     {
         "title": "Evolution cycle: Next currency niche or fleet capability unlock",
         "body": (
-            "**Auto-seeded by ROI status v0.5.11** when open work queue was empty.\n\n"
+            "**Auto-seeded by ROI status v0.5.15** when open work queue was empty.\n\n"
             "### Goal\n"
             "From live AGA ranking, pick the next highest-ROI currency niche or "
-            "fleet capability unlock. Prefer zero-cost-wealth-playbook-tool. "
+            "fleet capability unlock. Prefer zero-cost-wealth-playbook-tool + free-AI continuous loops. "
             "AI-owned; draft-only; no force-merge.\n\n"
             "Labels: catalyst, self-heal\n"
         ),
@@ -47,6 +47,7 @@ COMPLETED_SEED_TITLES = frozenset({
     "Evolution cycle: Vector / multi-modal sequences in EverythingDB",
     "Evolution cycle: AGA Actions → singularity-operator metrics feedback loop",
     "Evolution cycle: Continuous upgrade from live ROI ranking",
+    "Evolution cycle: Continuous upgrade 2026-09-15",
 })
 
 
@@ -169,9 +170,9 @@ def seed_evolution_issue(headers: dict) -> Optional[Dict[str, Any]]:
         pick = {
             "title": f"Evolution cycle: Continuous upgrade {_utc_now_iso()[:10]}",
             "body": (
-                "**Auto-seeded by ROI status v0.5.11** — all roadmap seeds already present.\n\n"
+                "**Auto-seeded by ROI status v0.5.15** — all roadmap seeds already present.\n\n"
                 "Pick highest-ROI remaining work from live AGA ranking. "
-                "Prefer currency path. AI-owned; draft-only; no force-merge.\n"
+                "Prefer currency path + free-AI continuous loops. AI-owned; draft-only; no force-merge.\n"
             ),
         }
 
@@ -239,8 +240,8 @@ def upsert_status(ranked: List[Dict[str, Any]], seeded: Optional[Dict[str, Any]]
         "",
         "---",
         f"Auto-updated by **Singularity ROI Status v{VERSION}**. "
-        "Continuous ROI ranking + AGA feedback operational. "
-        "SO#9 closed via currency cross-repo proof. "
+        "Continuous ROI ranking + AGA feedback + free-AI primary operational. "
+        "SO#9 closed via currency cross-repo proof. v0.5.15 continuous upgrade complete. "
         "Safe: issues + status only. No force-merge.",
     ])
     body = "\n".join(lines)
