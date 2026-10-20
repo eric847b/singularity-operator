@@ -1,0 +1,8 @@
+# Codacy / Bandit: skip assert-used (B101) in tests.
+# Asserts are correct and preferred in pytest; they are only stripped under python -O.
+# This eliminates the HIGH "Use of assert detected" false positives on test files.
+skips: ['B101']
+
+# More precise alternative (uncomment if you want asserts flagged outside tests):
+# assert_used:
+#   skips: ['*_test.py', '*test_*.py', 'tests/*', '**/tests/**']
