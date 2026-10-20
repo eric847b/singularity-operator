@@ -1,5 +1,6 @@
-"""Singularity Operator v0.5.18 - Ultimate self-improving AI system.
+"""Singularity Operator v0.5.19 - Ultimate self-improving AI system.
 
+v0.5.19: Deep currency experiment ranking (#43) — top_experiment + top_score from CURRENCY_STATUS.md JSON flow into continuous_roi_rank; hard bias to highest expected $/effort open experiment.
 v0.5.18: Deepen currency signal (#43) — fetch_currency_signals parses CURRENCY_STATUS.md JSON block from wealth repo.
 v0.5.17: Currency fleet signal (#43) — GitHubSeamless.fetch_currency_signals + Orchestrator currency_signal task + continuous_roi_rank prefers wealth path.
 v0.5.16: Continuous upgrade (#33) — FreeAIClient exposes get_status() + live provider tally; free-AI primary hardened.
@@ -20,7 +21,7 @@ from .serendipity_engine import SerendipityEngine
 from .browser_automation import BrowserAutomation
 from .userscript_gen import UserscriptGenerator
 
-__version__ = "0.5.18"
+__version__ = "0.5.19"
 __all__ = [
     "EverythingDB",
     "SelfImprover",
