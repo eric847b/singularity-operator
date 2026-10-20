@@ -1,8 +1,11 @@
-"""EverythingDB v0.5.9 - Universal sequence store + optional vector similarity.
+"""EverythingDB v0.5.19 - Universal sequence store + optional vector similarity.
 
 Zero-dep default: bag-of-words hashing embeddings + cosine similarity.
-Feature flag `enable_vectors` (default True for the stub; no external models).
+Feature flag `enable_vectors` (default True; no external models).
 Optional multi-modal tag support (text / code / image_ref / audio_ref).
+
+Aligned with Singularity Operator v0.5.19: prioritizes sequences that complete
+unknowns toward singularity and the preferred currency path.
 """
 
 from __future__ import annotations
@@ -97,7 +100,7 @@ class EverythingDB:
             "vector_queries": 0,
             "vector_hits": 0,
         }
-        self.health = {"status": "healthy", "last_check": _utc_now(), "version": "0.5.9"}
+        self.health = {"status": "healthy", "last_check": _utc_now(), "version": "0.5.19"}
         self._load_persisted_metrics()
 
     def _init_tables(self):
@@ -220,7 +223,6 @@ class EverythingDB:
             except Exception:
                 continue
             if dim != self.vector_dim or len(vec) != self.vector_dim:
-                # re-embed on dim mismatch is skipped for simplicity
                 continue
             score = _cosine(qvec, vec)
             if score >= min_score:
@@ -251,14 +253,14 @@ class EverythingDB:
             self.metrics["vector_hits"] += len(results)
         return results
 
-    def demo_vector_query(self, query: str = "self improve serendipity singularity") -> Dict[str, Any]:
+    def demo_vector_query(self, query: str = "self improve serendipity singularity currency") -> Dict[str, Any]:
         """Measurable demo: ensure seed data, run similarity, return report."""
-        # Seed a few sequences if DB is sparse
         count = self.conn.execute("SELECT COUNT(*) FROM sequences").fetchone()[0]
         if count < 3:
             self.add_sequence({"topic": "self_improve", "note": "compact evolution"}, "demo:evolve", "text")
             self.add_sequence({"topic": "serendipity", "bridge": "cross-sequence"}, "demo:serendipity", "text")
             self.add_sequence("def singularity_step(): pass  # code modality", "demo:code", "code")
+            self.add_sequence({"topic": "currency_path", "note": "setup-session-offer ranking"}, "demo:currency", "text")
         hits = self.similarity_search(query, top_k=5)
         report = {
             "query": query,
@@ -276,10 +278,18 @@ class EverythingDB:
         self.add_sequence(report, "vector:demo", "text")
         return report
 
-    def propose_unknown(self, domain: str = "AI self-improvement", n: int = 5) -> List[Any]:
+    def propose_unknown(self, domain: str = "AI self-improvement + singularity + currency", n: int = 5) -> List[Any]:
+        """Propose novel sequences that complete unknowns.
+
+        Strongly biased toward singularity acceleration and the preferred currency path
+        (highest expected $/effort experiments, runway, real tracked income).
+        """
         prompt = (
-            f"Propose {n} novel, compact knowledge sequences or transistor states for {domain} "
-            f"that complete unknowns or accelerate singularity. Return ONLY valid compact JSON array of strings or objects."
+            f"Propose {n} novel, compact knowledge sequences or transistor states for domain: {domain}. "
+            f"Prioritize sequences that (1) complete unknowns toward singularity / universal knowledge representation "
+            f"and (2) advance the preferred currency path (real income experiments, runway velocity, "
+            f"setup-session-offer delivery, zero paid APIs). "
+            f"Return ONLY a valid compact JSON array of strings or small objects. No commentary."
         )
         cached = self._get_from_cache(prompt)
         if cached:
@@ -287,7 +297,7 @@ class EverythingDB:
                 return json.loads(cached)
             except Exception:
                 pass
-        result = call_ai(prompt, provider="groq")
+        result = call_ai(prompt)
         self.metrics["llm_calls"] += 1
         sequences: List[Any] = []
         if isinstance(result, dict) and "response" in result:
@@ -302,7 +312,13 @@ class EverythingDB:
             except Exception:
                 sequences = [str(result)]
         else:
-            sequences = ["self_evolve_v5_compact", "EverythingDB_universal_latch", "serendipity_engine_v1"]
+            sequences = [
+                "self_evolve_v6_compact_currency",
+                "EverythingDB_universal_latch_v2",
+                "serendipity_engine_currency_bridge",
+                "setup_session_offer_delivery_loop",
+                "runway_velocity_transistor",
+            ]
         for seq in sequences:
             self.add_sequence(seq, tags=f"proposed:{domain}")
         self._save_to_cache(prompt, json.dumps(sequences))
@@ -326,7 +342,7 @@ class EverythingDB:
             {
                 "status": "healthy",
                 "last_check": _utc_now(),
-                "version": "0.5.9",
+                "version": "0.5.19",
                 "sequences": seq_count,
                 "embeddings": emb_count,
                 "enable_vectors": self.enable_vectors,
@@ -348,16 +364,16 @@ class EverythingDB:
             "vectors": False,
         }
         try:
-            props = self.propose_unknown("test", 1)
+            props = self.propose_unknown("test singularity currency", 1)
             tests["propose"] = len(props) > 0
             tests["cache"] = True
             snap = self.persist_metrics()
             tests["persist"] = bool(snap.get("persisted_at"))
             if self.enable_vectors:
-                demo = self.demo_vector_query("test singularity")
+                demo = self.demo_vector_query("test singularity currency")
                 tests["vectors"] = demo.get("hits", 0) >= 0
             else:
-                tests["vectors"] = True  # disabled is ok
+                tests["vectors"] = True
         except Exception as e:
             tests["error"] = str(e)[:200]
         return tests
@@ -378,4 +394,4 @@ class EverythingDB:
         return {"recovered": True, "type": failure_type, "new_resilience": "+10%"}
 
 
-print("EverythingDB v0.5.9 - Universal + optional vector similarity (zero-dep) ready")
+print("EverythingDB v0.5.19 - Universal sequence store + singularity/currency bias ready")
