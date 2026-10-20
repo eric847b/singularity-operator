@@ -1,4 +1,4 @@
-"""GitHubSeamless v0.5.17 - Multi-repo + evolution reports + AGA metrics + currency fleet signal.
+"""GitHubSeamless v0.5.18 - Multi-repo + evolution reports + AGA metrics + currency fleet signal.
 
 Inbound path: pull autonomous-github-agent profile + ROI status signals and
 return a structured metrics payload for EverythingDB / evolution_summary.
@@ -234,17 +234,27 @@ class GitHubSeamless:
         except Exception:
             return None
 
-    # ------------------------------------------------------------------
-    # Currency fleet signal (zero-cost-wealth-playbook-tool)
-    # ------------------------------------------------------------------
     def fetch_currency_signals(self) -> Dict[str, Any]:
-        """Pull lightweight currency/wealth path signals for continuous_roi_rank.
+        """Pull currency/wealth path signals for continuous_roi_rank.
 
-        Surfaces version, open-issue sample, and explicit preference flags so
-        the orchestrator can prefer currency work without running local ledger.
+        Prefers machine-readable CURRENCY_STATUS.md JSON block when present;
+        falls back to VERSION + open-issue sample.
         """
         o, r = WEALTH_REPO.split("/", 1)
         version = (self._fetch_file_text(o, r, "VERSION") or "").strip() or "unknown"
+        status_md = self._fetch_file_text(o, r, "CURRENCY_STATUS.md") or ""
+        status_json: Dict[str, Any] = {}
+        if status_md:
+            start = status_md.find("```json")
+            if start >= 0:
+                start = status_md.find("{", start)
+                end = status_md.find("```", start)
+                if start >= 0 and end > start:
+                    try:
+                        status_json = json.loads(status_md[start:end].strip())
+                    except Exception:
+                        status_json = {}
+
         issues_res = self._req("GET", f"/repos/{o}/{r}/issues?state=open&per_page=5")
         open_sample = 0
         titles: List[str] = []
@@ -255,37 +265,37 @@ class GitHubSeamless:
                 open_sample += 1
                 titles.append((issue.get("title") or "")[:80])
 
+        caps = status_json.get("capabilities") or [
+            "tracker",
+            "runway",
+            "income_experiment_rank",
+            "income_experiment_suggest",
+            "quote",
+            "client_pack",
+            "public_listing",
+        ]
         signal = {
             "source": WEALTH_REPO,
             "at": _utc_now(),
-            "version": version,
-            "preferred_currency_path": True,
-            "capabilities": [
-                "tracker",
-                "runway",
-                "income_experiment_rank",
-                "income_experiment_suggest",
-                "quote",
-                "client_pack",
-            ],
+            "version": status_json.get("version") or version,
+            "preferred_currency_path": bool(status_json.get("preferred_currency_path", True)),
+            "status": status_json.get("status") or ("healthy" if version != "unknown" else "unknown"),
+            "capabilities": caps,
             "open_issues_sample": open_sample,
             "open_titles": titles[:3],
-            "roi_note": (
+            "roi_note": status_json.get("roi_note") or (
                 "Prefer currency fleet work when ranking: runway velocity, "
                 "experiment rank/suggest, quote generation, public listing. "
                 "Zero paid APIs. Free-AI suggest is optional."
             ),
-            "ok": version != "unknown",
+            "status_file_present": bool(status_md),
+            "ok": version != "unknown" or bool(status_json),
         }
         self.metrics["currency_ingests"] += 1
         self.last_currency = signal
         return signal
 
-    # ------------------------------------------------------------------
-    # AGA → singularity-operator metrics feedback
-    # ------------------------------------------------------------------
     def fetch_aga_profile(self) -> Dict[str, Any]:
-        """Read autonomous-github-agent .agent_profile.json via Contents API."""
         o, r = AGA_REPO.split("/", 1)
         res = self._req("GET", f"/repos/{o}/{r}/contents/{AGA_PROFILE_PATH}")
         if not res.get("ok"):
@@ -300,7 +310,6 @@ class GitHubSeamless:
         return {"ok": True, "profile": profile, "sha": data.get("sha")}
 
     def fetch_aga_roi_signals(self, max_comments: int = 5) -> Dict[str, Any]:
-        """Pull latest comments from AGA ROI / fleet status issues as signals."""
         o, r = AGA_REPO.split("/", 1)
         signals: List[Dict[str, Any]] = []
         issue_num = self._find_issue_by_title_prefix(o, r, "🚀 Fleet ROI")
@@ -308,7 +317,6 @@ class GitHubSeamless:
             issue_num = self._find_issue_by_title_prefix(o, r, "🚀")
         if not issue_num:
             return {"ok": True, "issue": None, "signals": []}
-
         cres = self._req(
             "GET",
             f"/repos/{o}/{r}/issues/{issue_num}/comments?per_page={max_comments}&sort=updated&direction=desc",
@@ -316,21 +324,17 @@ class GitHubSeamless:
         if cres.get("ok") and isinstance(cres.get("data"), list):
             for c in cres["data"][:max_comments]:
                 body = c.get("body") or ""
-                signals.append(
-                    {
-                        "id": c.get("id"),
-                        "created_at": c.get("created_at"),
-                        "snippet": body[:240].replace("\n", " "),
-                        "has_json": "```json" in body or body.strip().startswith("{"),
-                    }
-                )
+                signals.append({
+                    "id": c.get("id"),
+                    "created_at": c.get("created_at"),
+                    "snippet": body[:240].replace("\n", " "),
+                    "has_json": "```json" in body or body.strip().startswith("{"),
+                })
         return {"ok": True, "issue": issue_num, "signals": signals}
 
     def ingest_aga_feedback(self, db: Any = None) -> Dict[str, Any]:
-        """Pull AGA profile + ROI signals; optionally store into EverythingDB."""
         profile_res = self.fetch_aga_profile()
         signals_res = self.fetch_aga_roi_signals()
-
         profile = profile_res.get("profile") or {}
         compact = {
             "source": AGA_REPO,
@@ -353,14 +357,12 @@ class GitHubSeamless:
             "profile_ok": bool(profile_res.get("ok")),
             "signals_ok": bool(signals_res.get("ok")),
         }
-
         stored_key = None
         if db is not None and hasattr(db, "add_sequence"):
             try:
                 stored_key = db.add_sequence(compact, tags="aga:feedback", modality="text")
             except Exception as e:
                 compact["db_error"] = str(e)[:120]
-
         self.metrics["aga_ingests"] += 1
         self.last_aga_feedback = compact
         return {
@@ -394,22 +396,16 @@ class GitHubSeamless:
             lines.append(json.dumps(extra, indent=2)[:1200])
             lines.append("```")
             lines.append("</details>")
-        lines.extend([
-            "",
-            f"— Auto-published by **GitHubSeamless v0.5.17** (evolution report)",
-        ])
+        lines.extend(["", "— Auto-published by **GitHubSeamless v0.5.18** (evolution report)"])
         body = "\n".join(lines)
-
         tgt = targets or ROI_STATUS_TARGETS
         results: List[Dict[str, Any]] = []
-
         for full, prefix in tgt:
             try:
                 o, r = full.split("/", 1)
             except ValueError:
                 results.append({"repo": full, "status": "skip", "reason": "bad name"})
                 continue
-
             issue_num = self._find_issue_by_title_prefix(o, r, prefix)
             if issue_num:
                 res = self.comment_on_issue(issue_num, body, owner=o, repo=r)
@@ -417,27 +413,16 @@ class GitHubSeamless:
             else:
                 res = self.create_issue(
                     title=f"{prefix} (auto-updated)",
-                    body=(
-                        f"**Living ROI / Evolution status** for `{full}`\n\n"
-                        f"Seeded by GitHubSeamless evolution report publisher.\n\n"
-                        f"{body}"
-                    ),
+                    body=f"**Living ROI / Evolution status** for `{full}`\n\nSeeded by GitHubSeamless.\n\n{body}",
                     labels=["fleet-status", "catalyst", "self-heal"],
                     owner=o,
                     repo=r,
                 )
                 entry = {"repo": full, "action": "issue", **res}
-
             if entry.get("status") in ("commented", "created"):
                 self.metrics["evolution_reports"] += 1
             results.append(entry)
-
-        return {
-            "status": "published",
-            "targets": len(tgt),
-            "results": results,
-            "metrics": self.metrics.copy(),
-        }
+        return {"status": "published", "targets": len(tgt), "results": results, "metrics": self.metrics.copy()}
 
     def sync_status(
         self,
@@ -450,26 +435,19 @@ class GitHubSeamless:
         stamp = _utc_now()
         body = (
             f"**Cross-repo status sync** from `{self.full_name}`  \n"
-            f"**At:** `{stamp}`  \n\n"
-            f"{summary}\n\n"
-            f"— GitHubSeamless v0.5.17 multi-repo orchestration"
+            f"**At:** `{stamp}`  \n\n{summary}\n\n"
+            f"— GitHubSeamless v0.5.18 multi-repo orchestration"
         )
-
         for full in targets:
             try:
                 o, r = full.split("/", 1)
             except ValueError:
                 results.append({"repo": full, "status": "skip", "reason": "bad name"})
                 continue
-
-            search = self._req(
-                "GET",
-                f"/repos/{o}/{r}/issues?state=open&labels={label}&per_page=5",
-            )
+            search = self._req("GET", f"/repos/{o}/{r}/issues?state=open&labels={label}&per_page=5")
             issue_num = None
             if search.get("ok") and isinstance(search.get("data"), list) and search["data"]:
                 issue_num = search["data"][0].get("number")
-
             if issue_num:
                 res = self.comment_on_issue(issue_num, body, owner=o, repo=r)
                 results.append({"repo": full, "action": "comment", "issue": issue_num, **res})
@@ -482,16 +460,9 @@ class GitHubSeamless:
                     repo=r,
                 )
                 results.append({"repo": full, "action": "issue", **res})
-
             if results[-1].get("status") in ("commented", "created"):
                 self.metrics["cross_repo_syncs"] += 1
-
-        return {
-            "status": "sync_complete",
-            "targets": len(targets),
-            "results": results,
-            "metrics": self.metrics.copy(),
-        }
+        return {"status": "sync_complete", "targets": len(targets), "results": results, "metrics": self.metrics.copy()}
 
     def propagate_catalyst(
         self,
@@ -501,45 +472,26 @@ class GitHubSeamless:
         target_repos: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         targets = target_repos or [x for x in FLEET_REPOS if x != self.full_name]
-        targets = sorted(
-            targets,
-            key=lambda x: 0 if "autonomous-github-agent" in x else 1,
-        )
+        targets = sorted(targets, key=lambda x: 0 if "autonomous-github-agent" in x else 1)
         results: List[Dict[str, Any]] = []
         stamp = _utc_now()
         title = f"Catalyst: {key[:60]}"
         body = (
             f"**Catalyst propagation** from `{self.full_name}`  \n"
-            f"**Key:** `{key}`  \n"
-            f"**Source issue:** {source_issue or 'n/a'}  \n"
-            f"**At:** `{stamp}`  \n\n"
-            f"### Insight\n{insight}\n\n"
-            f"— Auto-generated by GitHubSeamless v0.5.17 (cross-repo catalyst)"
+            f"**Key:** `{key}`  \n**Source issue:** {source_issue or 'n/a'}  \n"
+            f"**At:** `{stamp}`  \n\n### Insight\n{insight}\n\n"
+            f"— Auto-generated by GitHubSeamless v0.5.18 (cross-repo catalyst)"
         )
-
         for full in targets[:3]:
             try:
                 o, r = full.split("/", 1)
             except ValueError:
                 continue
-            res = self.create_issue(
-                title=title,
-                body=body,
-                labels=["catalyst", "self-heal"],
-                owner=o,
-                repo=r,
-            )
+            res = self.create_issue(title=title, body=body, labels=["catalyst", "self-heal"], owner=o, repo=r)
             results.append({"repo": full, **res})
             if res.get("status") == "created":
                 self.metrics["catalyst_propagations"] += 1
-
-        return {
-            "status": "propagated",
-            "key": key,
-            "targets_attempted": len(results),
-            "results": results,
-            "metrics": self.metrics.copy(),
-        }
+        return {"status": "propagated", "key": key, "targets_attempted": len(results), "results": results, "metrics": self.metrics.copy()}
 
     def fleet_health_snapshot(self) -> Dict[str, Any]:
         snap: Dict[str, Any] = {"at": _utc_now(), "repos": {}}
@@ -559,4 +511,4 @@ class GitHubSeamless:
         return self.metrics.copy()
 
 
-print("GitHubSeamless v0.5.17 - AGA metrics + currency fleet signal ready")
+print("GitHubSeamless v0.5.18 - AGA metrics + deepened currency status file ready")
