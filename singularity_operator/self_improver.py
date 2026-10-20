@@ -1,4 +1,4 @@
-"""SelfImprover v0.5.16 - AI-driven evolution with free-AI primary path, validation and persistence."""
+"""SelfImprover v0.5.19 - AI-driven evolution with free-AI primary path, validation and persistence."""
 
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
@@ -58,12 +58,12 @@ CODE:
                 "self_improver",
             )
             self.db.metrics["learning_writes"] = self.db.metrics.get("learning_writes", 0) + 1
-            print(f"SelfImprover v0.5.16: Applied evolution #{self.improvements_made} via {entry.get('provider')} for {goal}")
+            print(f"SelfImprover v0.5.19: Applied evolution #{self.improvements_made} via {entry.get('provider')} for {goal}")
             return improved
         except Exception as e:
             self.failures += 1
             self.evolution_log.append({"goal": goal, "timestamp": _utc_now(), "ok": False, "error": str(e)[:120]})
-            print(f"SelfImprover v0.5.16: evolution rejected ({e}); keeping original")
+            print(f"SelfImprover v0.5.19: evolution rejected ({e}); keeping original")
             return code_snippet
 
     def get_improvement_report(self) -> Dict[str, Any]:
@@ -78,4 +78,4 @@ CODE:
         return f"SelfImprover: improvements={self.improvements_made} failures={self.failures} learning_writes={self.db.metrics.get('learning_writes', 0)}"
 
 
-print("SelfImprover v0.5.16 - Free-AI primary validated evolution active")
+print("SelfImprover v0.5.19 - Free-AI primary validated evolution active")
