@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "singularity-operator"
-version = "0.5.19"
+version = "0.5.20"
 description = "Ultimate self-improving AI (Singularity Operator): EverythingDB + SelfImprover + Orchestrator + FreeAIClient + continuous ROI ranking + deep currency experiment ranking (top_experiment/top_score from CURRENCY_STATUS.md)."
 authors = [{name = "Eric (Mufnluvn)"}]
 readme = "README.md"
