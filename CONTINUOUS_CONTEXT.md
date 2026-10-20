@@ -10,7 +10,7 @@ Private repos consume limited GitHub Actions minutes (Free plan ~2,000 Linux min
 
 ## Fleet (always in scope)
 - `eric847b/AI-Collaboration-Hub` — public — FreeAIRotator + suite (prefer for continuous work)
-- `eric847b/singularity-operator` — public — FreeAIClient + Auto-Evolve — **v0.5.19**
+- `eric847b/singularity-operator` — public — FreeAIClient + Auto-Evolve — **v0.5.20**
 - `eric847b/autonomous-github-agent` — **private** — control plane / Catalyst (keep light; avoid frequent schedules)
 - `eric847b/collabhub-modules` — public
 - `eric847b/modular-hub-modernization` — public
@@ -30,12 +30,14 @@ Your choice. Highest-return root action first. Improve zero-cost continuous deve
 
 ## Current High-ROI Themes (updated 2026-10-20)
 1. **Public-first continuous loops** — keep Auto-Evolve, ROI, quality gates, free-AI refinement on public repos only.
-2. **Currency path first-class + experiment ranking** — zero-cost-wealth-playbook-tool signals (including top_experiment/top_score) are ingested via `fetch_currency_signals` and hard-biased inside `continuous_roi_rank` (v0.5.19).
+2. **Currency path first-class + experiment ranking** — zero-cost-wealth-playbook-tool signals (including top_experiment/top_score) are ingested via `fetch_currency_signals` and hard-biased inside `continuous_roi_rank` (v0.5.19+).
 3. **Minimize private quota burn** — disable or heavily throttle scheduled workflows on autonomous-github-agent until self-hosted or public companion exists.
-4. Expand free AI capacity and reliability (FreeAIClient.get_status already live).
+4. Expand free AI capacity and reliability (FreeAIClient.get_status live; tests + .bandit keep Codacy clean).
 5. Real measurable progress only (no simulated work).
 
 ## Recent measurable progress
+- singularity-operator **v0.5.20**: Release integrity (version parity, fail-closed executable, SHA-256 checksums).
+- singularity-operator **quality**: `.bandit` skips B101 so legitimate pytest asserts in `tests/` are not flagged HIGH by Codacy; minimal FreeAIClient status tests added/strengthened.
 - singularity-operator **v0.5.19**: Deep currency experiment ranking (#43) — top_experiment + top_score flow into continuous_roi_rank; hard bias to highest expected $/effort open experiment.
 - singularity-operator **v0.5.18**: Deepen currency signal (#43) — full CURRENCY_STATUS.md JSON parse.
 - singularity-operator **v0.5.17**: Currency fleet signal wired (#43) — GitHubSeamless.fetch_currency_signals + currency_signal task + continuous_roi_rank preference.
