@@ -1,7 +1,8 @@
-"""GitHubSeamless v0.5.10 - Multi-repo + evolution reports + AGA metrics feedback.
+"""GitHubSeamless v0.5.17 - Multi-repo + evolution reports + AGA metrics + currency fleet signal.
 
 Inbound path: pull autonomous-github-agent profile + ROI status signals and
 return a structured metrics payload for EverythingDB / evolution_summary.
+Currency path: fetch_currency_signals from zero-cost-wealth-playbook-tool.
 """
 
 from __future__ import annotations
@@ -9,7 +10,6 @@ from __future__ import annotations
 import base64
 import json
 import os
-import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -35,10 +35,11 @@ ROI_STATUS_TARGETS: List[Tuple[str, str]] = [
 
 AGA_REPO = "eric847b/autonomous-github-agent"
 AGA_PROFILE_PATH = ".agent_profile.json"
+WEALTH_REPO = "eric847b/zero-cost-wealth-playbook-tool"
 
 
 class GitHubSeamless:
-    """Seamless GitHub agent with multi-repo fleet + AGA feedback ingest."""
+    """Seamless GitHub agent with multi-repo fleet + AGA feedback + currency signals."""
 
     def __init__(
         self,
@@ -59,9 +60,11 @@ class GitHubSeamless:
             "catalyst_propagations": 0,
             "evolution_reports": 0,
             "aga_ingests": 0,
+            "currency_ingests": 0,
             "errors": 0,
         }
         self.last_aga_feedback: Optional[Dict[str, Any]] = None
+        self.last_currency: Optional[Dict[str, Any]] = None
         self.base = "https://api.github.com"
 
     def _headers(self) -> Dict[str, str]:
@@ -220,6 +223,64 @@ class GitHubSeamless:
                 return issue.get("number")
         return None
 
+    def _fetch_file_text(self, owner: str, repo: str, path: str) -> Optional[str]:
+        res = self._req("GET", f"/repos/{owner}/{repo}/contents/{path}")
+        if not res.get("ok"):
+            return None
+        data = res["data"]
+        content_b64 = data.get("content") or ""
+        try:
+            return base64.b64decode(content_b64.replace("\n", "")).decode()
+        except Exception:
+            return None
+
+    # ------------------------------------------------------------------
+    # Currency fleet signal (zero-cost-wealth-playbook-tool)
+    # ------------------------------------------------------------------
+    def fetch_currency_signals(self) -> Dict[str, Any]:
+        """Pull lightweight currency/wealth path signals for continuous_roi_rank.
+
+        Surfaces version, open-issue sample, and explicit preference flags so
+        the orchestrator can prefer currency work without running local ledger.
+        """
+        o, r = WEALTH_REPO.split("/", 1)
+        version = (self._fetch_file_text(o, r, "VERSION") or "").strip() or "unknown"
+        issues_res = self._req("GET", f"/repos/{o}/{r}/issues?state=open&per_page=5")
+        open_sample = 0
+        titles: List[str] = []
+        if issues_res.get("ok") and isinstance(issues_res.get("data"), list):
+            for issue in issues_res["data"]:
+                if issue.get("pull_request"):
+                    continue
+                open_sample += 1
+                titles.append((issue.get("title") or "")[:80])
+
+        signal = {
+            "source": WEALTH_REPO,
+            "at": _utc_now(),
+            "version": version,
+            "preferred_currency_path": True,
+            "capabilities": [
+                "tracker",
+                "runway",
+                "income_experiment_rank",
+                "income_experiment_suggest",
+                "quote",
+                "client_pack",
+            ],
+            "open_issues_sample": open_sample,
+            "open_titles": titles[:3],
+            "roi_note": (
+                "Prefer currency fleet work when ranking: runway velocity, "
+                "experiment rank/suggest, quote generation, public listing. "
+                "Zero paid APIs. Free-AI suggest is optional."
+            ),
+            "ok": version != "unknown",
+        }
+        self.metrics["currency_ingests"] += 1
+        self.last_currency = signal
+        return signal
+
     # ------------------------------------------------------------------
     # AGA → singularity-operator metrics feedback
     # ------------------------------------------------------------------
@@ -242,12 +303,10 @@ class GitHubSeamless:
         """Pull latest comments from AGA ROI / fleet status issues as signals."""
         o, r = AGA_REPO.split("/", 1)
         signals: List[Dict[str, Any]] = []
-        # Prefer known ROI title prefixes + fleet-status label
         issue_num = self._find_issue_by_title_prefix(o, r, "🚀 Fleet ROI")
         if not issue_num:
             issue_num = self._find_issue_by_title_prefix(o, r, "🚀")
         if not issue_num:
-            # fallback: open issue # from profile roi_issue_url pattern later
             return {"ok": True, "issue": None, "signals": []}
 
         cres = self._req(
@@ -268,15 +327,11 @@ class GitHubSeamless:
         return {"ok": True, "issue": issue_num, "signals": signals}
 
     def ingest_aga_feedback(self, db: Any = None) -> Dict[str, Any]:
-        """Pull AGA profile + ROI signals; optionally store into EverythingDB.
-
-        Returns a compact feedback payload suitable for evolution_summary.
-        """
+        """Pull AGA profile + ROI signals; optionally store into EverythingDB."""
         profile_res = self.fetch_aga_profile()
         signals_res = self.fetch_aga_roi_signals()
 
         profile = profile_res.get("profile") or {}
-        # Compact metrics slice — highest-signal fields only
         compact = {
             "source": AGA_REPO,
             "at": _utc_now(),
@@ -341,7 +396,7 @@ class GitHubSeamless:
             lines.append("</details>")
         lines.extend([
             "",
-            f"— Auto-published by **GitHubSeamless v0.5.10** (evolution report)",
+            f"— Auto-published by **GitHubSeamless v0.5.17** (evolution report)",
         ])
         body = "\n".join(lines)
 
@@ -397,7 +452,7 @@ class GitHubSeamless:
             f"**Cross-repo status sync** from `{self.full_name}`  \n"
             f"**At:** `{stamp}`  \n\n"
             f"{summary}\n\n"
-            f"— GitHubSeamless v0.5.10 multi-repo orchestration"
+            f"— GitHubSeamless v0.5.17 multi-repo orchestration"
         )
 
         for full in targets:
@@ -459,7 +514,7 @@ class GitHubSeamless:
             f"**Source issue:** {source_issue or 'n/a'}  \n"
             f"**At:** `{stamp}`  \n\n"
             f"### Insight\n{insight}\n\n"
-            f"— Auto-generated by GitHubSeamless v0.5.10 (cross-repo catalyst)"
+            f"— Auto-generated by GitHubSeamless v0.5.17 (cross-repo catalyst)"
         )
 
         for full in targets[:3]:
@@ -504,4 +559,4 @@ class GitHubSeamless:
         return self.metrics.copy()
 
 
-print("GitHubSeamless v0.5.10 - AGA metrics feedback loop ready")
+print("GitHubSeamless v0.5.17 - AGA metrics + currency fleet signal ready")
