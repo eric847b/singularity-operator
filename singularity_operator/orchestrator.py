@@ -1,7 +1,8 @@
-"""SingularityOrchestrator v0.5.18 - Continuous ROI + free AI + deepened currency fleet signal.
+"""SingularityOrchestrator v0.5.19 - Continuous ROI + free AI + deep currency experiment ranking.
 
 Uses AGA-fed roi_top_ref after aga_feedback; records ranked target into EverythingDB.
-Currency path: fetch_currency_signals (CURRENCY_STATUS.md JSON) preferred inside continuous_roi_rank.
+Currency path: fetch_currency_signals (CURRENCY_STATUS.md JSON + top_experiment/top_score)
+hard-biased inside continuous_roi_rank toward highest expected $/effort open experiment.
 Free AI rotator powers continuous refinement.
 """
 
@@ -76,7 +77,7 @@ class SingularityOrchestrator:
                 before = self.improver.improvements_made
                 evolved = self.improver.evolve(
                     sample,
-                    goal="compact + continuous ROI ranking + currency fleet + free AI context",
+                    goal="compact + continuous ROI ranking + currency experiment ranking + free AI context",
                 )
                 accepted = evolved.strip() != sample.strip()
                 actual = self.improver.improvements_made - before
@@ -88,7 +89,7 @@ class SingularityOrchestrator:
                 })
                 self.metrics["improvements"] += actual
             elif task == "propose_unknown_sequences":
-                seqs = self.db.propose_unknown("singularity acceleration + currency", 3)
+                seqs = self.db.propose_unknown("singularity acceleration + currency experiment ranking", 3)
                 results.append({"task": task, "sequences": seqs[:2]})
             elif task == "serendipity_cycle":
                 ser = self.serendipity.run_cycle(connections=4, amplifications=3, deep=True)
@@ -106,7 +107,7 @@ class SingularityOrchestrator:
                 self.metrics["browser_tests"] += 1
                 self.metrics["userscript_tests"] += 1
             elif task == "vector_demo":
-                demo = self.db.demo_vector_query("self improve serendipity singularity currency wealth")
+                demo = self.db.demo_vector_query("self improve serendipity singularity currency wealth experiment")
                 results.append({"task": task, "hits": demo.get("hits")})
                 self.metrics["vector_demos"] += 1
             elif task == "aga_feedback":
@@ -123,6 +124,8 @@ class SingularityOrchestrator:
                     "task": task,
                     "version": cur.get("version"),
                     "preferred": cur.get("preferred_currency_path"),
+                    "top_experiment": cur.get("top_experiment"),
+                    "top_score": cur.get("top_score"),
                     "capabilities": cur.get("capabilities"),
                     "status_file": cur.get("status_file_present"),
                     "stored_key": key,
@@ -132,9 +135,11 @@ class SingularityOrchestrator:
                 aga = self.last_aga or {}
                 cur = self.last_currency or {}
                 prefer_currency = bool(cur.get("preferred_currency_path"))
+                top_exp = cur.get("top_experiment") or "setup-session-offer"
+                top_score = cur.get("top_score")
                 pick = {
                     "at": _utc_now(),
-                    "source": "aga_profile+currency",
+                    "source": "aga_profile+currency_experiment",
                     "roi_top_ref": aga.get("roi_top_ref"),
                     "roi_top_score": aga.get("roi_top_score"),
                     "fleet_health": aga.get("fleet_last_health"),
@@ -143,11 +148,14 @@ class SingularityOrchestrator:
                     "currency_status": cur.get("status"),
                     "currency_capabilities": cur.get("capabilities") or [],
                     "currency_status_file": cur.get("status_file_present"),
+                    "top_experiment": top_exp,
+                    "top_score": top_score,
                     "action": "rank_recorded",
                     "note": (
-                        "Prefer currency fleet path (zero-cost-wealth runway / experiment rank/suggest) "
-                        "when ranking open catalyst work; draft-only; no force-merge. "
-                        "Free AI context in CONTINUOUS_CONTEXT.md."
+                        f"HARD BIAS to currency fleet top experiment '{top_exp}' "
+                        f"(score={top_score}). Prefer real work that advances runway velocity, "
+                        f"experiment delivery, quote, or public listing. Draft-only; no force-merge. "
+                        f"Never mark won without real payment. Free AI context in CONTINUOUS_CONTEXT.md."
                         if prefer_currency
                         else "Execute highest-ROI open catalyst work from roi_top_ref; draft-only; no force-merge."
                     ),
@@ -159,6 +167,8 @@ class SingularityOrchestrator:
                     "roi_top_ref": pick.get("roi_top_ref"),
                     "roi_top_score": pick.get("roi_top_score"),
                     "currency_preferred": prefer_currency,
+                    "top_experiment": top_exp,
+                    "top_score": top_score,
                     "stored_key": key,
                 })
                 self.metrics["roi_ranks"] += 1
@@ -210,7 +220,11 @@ class SingularityOrchestrator:
         if aga or pick:
             aga_bit = f"aga_runs={aga.get('runs', '?')} roi={pick.get('roi_top_score') or aga.get('roi_top_score', '?')}:{pick.get('roi_top_ref') or aga.get('roi_top_ref', '')} fleet={aga.get('fleet_last_health', '?')} "
         fa_bit = f"free_ai_avail={fa.get('available', [])} " if fa else ""
-        cur_bit = f"currency={cur.get('version', '?')} prefer={cur.get('preferred_currency_path', False)} status_file={cur.get('status_file_present', False)} " if cur else ""
+        cur_bit = (
+            f"currency={cur.get('version', '?')} prefer={cur.get('preferred_currency_path', False)} "
+            f"top_exp={cur.get('top_experiment', '?')} top_score={cur.get('top_score', '?')} "
+            if cur else ""
+        )
         return (
             f"[{_utc_now()}] cycle={self.cycle_count} improvements={self.improver.improvements_made} "
             f"seqs={h.get('sequences', 0)} emb={h.get('embeddings', 0)} llm={self.db.metrics.get('llm_calls', 0)} "
@@ -224,7 +238,7 @@ class SingularityOrchestrator:
 
     def get_status(self) -> Dict[str, Any]:
         return {
-            "version": "0.5.18",
+            "version": "0.5.19",
             "cycles": self.cycle_count,
             "db_health": self.db.get_health_snapshot(),
             "aga_feedback": self.last_aga,
@@ -237,4 +251,4 @@ class SingularityOrchestrator:
         }
 
 
-print("SingularityOrchestrator v0.5.18 - Continuous ROI + deepened currency fleet signal active")
+print("SingularityOrchestrator v0.5.19 - Continuous ROI + deep currency experiment ranking active")
