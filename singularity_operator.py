@@ -1,4 +1,4 @@
-"""Singularity Operator v0.5.15 Launcher — full cycle including AGA feedback + free AI.
+"""Singularity Operator v0.5.16 Launcher — full cycle including AGA feedback + free AI status.
 """
 
 import os
@@ -15,6 +15,7 @@ from singularity_operator import (
     GitHubSeamless,
     __version__,
 )
+from singularity_operator.free_ai_client import get_free_ai
 
 
 def main():
@@ -31,6 +32,10 @@ def main():
     usgen = UserscriptGenerator()
     gh = GitHubSeamless()
     orch = SingularityOrchestrator(db=db)
+
+    print("\n[0] Free AI status...")
+    fa = get_free_ai().get_status()
+    print(f"  available={fa.get('available')} tally={fa.get('tally')}")
 
     print("\n[1] Propose + evolve...")
     db.propose_unknown("core self-improvement + singularity", 3)
@@ -60,7 +65,7 @@ def main():
     print("Cycle tasks:", [r.get("task") for r in cycle_results])
     print("Summary:", orch.evolution_summary())
 
-    print(f"\n=== v{__version__} complete. AGA feedback + free AI loop operational. ===")
+    print(f"\n=== v{__version__} complete. AGA feedback + free AI status surface operational. ===")
 
 
 if __name__ == "__main__":

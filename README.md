@@ -1,4 +1,4 @@
-# Singularity Operator v0.5.15
+# Singularity Operator v0.5.16
 
 **Self-improving AI system** with EverythingDB, fleet orchestration, AGA metrics feedback, and **continuous upgrade from live ROI ranking** — powered by a zero-cost free AI rotator.
 
@@ -16,6 +16,7 @@ Continuous development loops use `singularity_operator/free_ai_client.py`:
 
 Seamless failover — work never pauses on rate limits or missing keys.  
 `groq_wrapper.py` routes all intelligence through this pool. SelfImprover is free-AI primary.
+`FreeAIClient.get_status()` now surfaces live available providers + tally for ROI / Orchestrator.
 
 ## Releases & Windows executable
 
@@ -33,10 +34,17 @@ GITHUB_TOKEN=...         # or GH_FULL_PAT
 
 To cut a new release after packaging changes land:
 ```bash
-git tag v0.5.15
-git push origin v0.5.15
+git tag v0.5.16
+git push origin v0.5.16
 ```
 GitHub Actions builds the EXE + packages and publishes the release automatically.
+
+## What's New in v0.5.16
+- Continuous upgrade cycle executed (ROI #33).
+- FreeAIClient exposes `get_status()` (available providers, cooldown, tally, keys present) for live ROI and Orchestrator consumption.
+- New cycle task `free_ai_status` records status into EverythingDB.
+- Version metadata, launcher, SelfImprover, Orchestrator fully synchronized.
+- Measurable free-AI primary progress + fleet-ready metrics surface.
 
 ## What's New in v0.5.15
 - Continuous upgrade cycle executed (ROI #33).
@@ -58,11 +66,12 @@ python singularity_operator.py
 Requires `GITHUB_TOKEN` / `GH_FULL_PAT` for live AGA ingest and fleet actions.
 
 ## Architecture
-EverythingDB · SelfImprover (free-AI primary) · Chaos · Serendipity · Browser · Userscript · GitHubSeamless (fleet + AGA feedback) · Orchestrator (incl. continuous_roi_rank) · **FreeAIClient**
+EverythingDB · SelfImprover (free-AI primary) · Chaos · Serendipity · Browser · Userscript · GitHubSeamless (fleet + AGA feedback) · Orchestrator (incl. continuous_roi_rank + free_ai_status) · **FreeAIClient**
 
 ## Roadmap
 - Next live-ranked catalyst work after empty queue / new seeds.
 - Optional real embedding backend (feature-flagged).
 - Keep release metadata synchronized automatically before every versioned release.
+- Currency / wealth fleet signals from zero-cost-wealth-playbook-tool.
 
-*Status: v0.5.15 continuous upgrade complete. Ready for next auto-evolve cycle.*
+*Status: v0.5.16 continuous upgrade complete. Ready for next auto-evolve cycle.*

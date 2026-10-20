@@ -1,8 +1,9 @@
-"""SingularityOrchestrator v0.5.15 - Continuous upgrade from live ROI ranking + free AI context.
+"""SingularityOrchestrator v0.5.16 - Continuous upgrade from live ROI ranking + free AI context.
 
 Uses AGA-fed roi_top_ref after aga_feedback; records ranked target into EverythingDB.
 Cross-repo currency path proven via zero-cost-wealth OSS niche (SO#9).
 Free AI rotator (local + Pollinations no-key + free tiers) powers continuous refinement.
+v0.5.16 surfaces FreeAIClient.get_status() into cycle metrics for measurable progress.
 """
 
 from datetime import datetime, timezone
@@ -15,6 +16,7 @@ from .chaos_engine import ChaosEngine
 from .serendipity_engine import SerendipityEngine
 from .browser_automation import BrowserAutomation
 from .userscript_gen import UserscriptGenerator
+from .free_ai_client import get_free_ai
 
 
 def _utc_now() -> str:
@@ -47,6 +49,7 @@ class SingularityOrchestrator:
         self.last_summary: str = ""
         self.last_aga: Optional[Dict[str, Any]] = None
         self.last_roi_pick: Optional[Dict[str, Any]] = None
+        self.last_free_ai_status: Optional[Dict[str, Any]] = None
 
     def run_orchestrated_cycle(self, tasks: List[str] = None) -> List[Dict[str, Any]]:
         if tasks is None:
@@ -59,6 +62,7 @@ class SingularityOrchestrator:
                 "vector_demo",
                 "aga_feedback",
                 "continuous_roi_rank",
+                "free_ai_status",
                 "fleet_sync",
                 "publish_evolution_report",
             ]
@@ -124,6 +128,11 @@ class SingularityOrchestrator:
                 self.last_roi_pick = pick
                 results.append({"task": task, "roi_top_ref": pick.get("roi_top_ref"), "roi_top_score": pick.get("roi_top_score"), "stored_key": key})
                 self.metrics["roi_ranks"] += 1
+            elif task == "free_ai_status":
+                status = get_free_ai().get_status()
+                self.last_free_ai_status = status
+                self.db.add_sequence(status, tags="free_ai:status", modality="text")
+                results.append({"task": task, "available": status.get("available"), "tally": status.get("tally")})
             elif task == "fleet_sync":
                 summary = self.evolution_summary()
                 sync = self.gh.sync_status(summary, target_repos=["eric847b/autonomous-github-agent", "eric847b/AI-Collaboration-Hub"])
@@ -131,7 +140,7 @@ class SingularityOrchestrator:
                 self.metrics["fleet_syncs"] += 1
             elif task == "publish_evolution_report":
                 summary = self.evolution_summary()
-                extra = {"orchestrator_metrics": self.metrics.copy(), "aga_feedback": self.last_aga, "roi_pick": self.last_roi_pick, "gh": self.gh.get_metrics()}
+                extra = {"orchestrator_metrics": self.metrics.copy(), "aga_feedback": self.last_aga, "roi_pick": self.last_roi_pick, "free_ai": self.last_free_ai_status, "gh": self.gh.get_metrics()}
                 pub = self.gh.publish_evolution_report(summary, extra=extra)
                 results.append({"task": task, "status": pub.get("status")})
                 self.metrics["evolution_reports"] += 1
@@ -147,13 +156,15 @@ class SingularityOrchestrator:
         h = self.db.get_health_snapshot()
         aga = self.last_aga or {}
         pick = self.last_roi_pick or {}
+        fa = self.last_free_ai_status or {}
         aga_bit = ""
         if aga or pick:
             aga_bit = f"aga_runs={aga.get('runs', '?')} roi={pick.get('roi_top_score') or aga.get('roi_top_score', '?')}:{pick.get('roi_top_ref') or aga.get('roi_top_ref', '')} fleet={aga.get('fleet_last_health', '?')} "
-        return (f"[{_utc_now()}] cycle={self.cycle_count} improvements={self.improver.improvements_made} seqs={h.get('sequences', 0)} emb={h.get('embeddings', 0)} llm={self.db.metrics.get('llm_calls', 0)} chaos={self.chaos.experiments_run}/{self.chaos.resilience_score:.0f} serendipity={self.serendipity.captures}/{self.serendipity.connections_found} {aga_bit}roi_ranks={self.metrics.get('roi_ranks', 0)} aga_ingests={self.gh.metrics.get('aga_ingests', 0)} fleet_syncs={self.metrics.get('fleet_syncs', 0)} | {self.improver.learning_summary_line()} | {self.chaos.summary_line()} | {self.serendipity.summary_line()}")
+        fa_bit = f"free_ai_avail={fa.get('available', [])} " if fa else ""
+        return (f"[{_utc_now()}] cycle={self.cycle_count} improvements={self.improver.improvements_made} seqs={h.get('sequences', 0)} emb={h.get('embeddings', 0)} llm={self.db.metrics.get('llm_calls', 0)} chaos={self.chaos.experiments_run}/{self.chaos.resilience_score:.0f} serendipity={self.serendipity.captures}/{self.serendipity.connections_found} {aga_bit}{fa_bit}roi_ranks={self.metrics.get('roi_ranks', 0)} aga_ingests={self.gh.metrics.get('aga_ingests', 0)} fleet_syncs={self.metrics.get('fleet_syncs', 0)} | {self.improver.learning_summary_line()} | {self.chaos.summary_line()} | {self.serendipity.summary_line()}")
 
     def get_status(self) -> Dict[str, Any]:
-        return {"version": "0.5.15", "cycles": self.cycle_count, "db_health": self.db.get_health_snapshot(), "aga_feedback": self.last_aga, "roi_pick": self.last_roi_pick, "metrics": self.metrics, "gh_metrics": self.gh.get_metrics(), "last_summary": self.last_summary or self.evolution_summary()}
+        return {"version": "0.5.16", "cycles": self.cycle_count, "db_health": self.db.get_health_snapshot(), "aga_feedback": self.last_aga, "roi_pick": self.last_roi_pick, "free_ai_status": self.last_free_ai_status, "metrics": self.metrics, "gh_metrics": self.gh.get_metrics(), "last_summary": self.last_summary or self.evolution_summary()}
 
 
-print("SingularityOrchestrator v0.5.15 - Continuous ROI ranking + free AI context active")
+print("SingularityOrchestrator v0.5.16 - Continuous ROI ranking + free AI status surface active")

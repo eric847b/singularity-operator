@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Free AI Client — zero-cost multi-provider rotator for continuous development.
+"""Free AI Client v0.5.16 — zero-cost multi-provider rotator for continuous development.
 
 Local-first (Ollama) → Pollinations no-key → free cloud tiers (Groq, OpenRouter, etc.).
 Seamless failover so continuous refinement never pauses on rate limits or missing keys.
 Compatible with Orchestrator, SelfImprover, EverythingDB, and autonomous agents.
+Exposes get_status() for live ROI / Orchestrator consumption.
 """
 
 from __future__ import annotations
@@ -25,9 +26,11 @@ class FreeAIClient:
 
     def __init__(self, timeout: int = 30):
         self.timeout = timeout
-        self.tally = {"calls": 0, "failures": 0, "rotations": 0}
+        self.tally = {"calls": 0, "failures": 0, "rotations": 0, "successes": 0}
         self.cooldowns: Dict[str, float] = {}
         self.cooldown_s = 60.0
+        self.last_provider: Optional[str] = None
+        self.last_error: Optional[str] = None
 
     def _providers(self) -> List[Dict[str, Any]]:
         """Ordered free pool. Local permanent-free first."""
@@ -90,6 +93,27 @@ class FreeAIClient:
             return False
         return True
 
+    def get_status(self) -> Dict[str, Any]:
+        """Live status for ROI ranking, Orchestrator, and fleet health."""
+        providers = self._providers()
+        available = [p["name"] for p in providers if self._available(p)]
+        cooled = [name for name, until in self.cooldowns.items() if time.time() < until]
+        return {
+            "version": "0.5.16",
+            "available": available,
+            "cooled_down": cooled,
+            "tally": dict(self.tally),
+            "last_provider": self.last_provider,
+            "last_error": self.last_error,
+            "local_first": True,
+            "pollinations_no_key": True,
+            "keys_present": {
+                "GROQ_API_KEY": bool(_env("GROQ_API_KEY")),
+                "OPENROUTER_API_KEY": bool(_env("OPENROUTER_API_KEY")),
+                "TOGETHER_API_KEY": bool(_env("TOGETHER_API_KEY")),
+            },
+        }
+
     def complete(
         self,
         prompt: str,
@@ -133,6 +157,9 @@ class FreeAIClient:
                             or ""
                         )
                         if content.strip():
+                            self.tally["successes"] += 1
+                            self.last_provider = p["name"]
+                            self.last_error = None
                             return {
                                 "provider": p["name"],
                                 "response": content.strip(),
@@ -145,11 +172,13 @@ class FreeAIClient:
                     self.tally["failures"] += 1
                     self.tally["rotations"] += 1
                     last_err = f"{p['name']} HTTP {resp.status_code}"
+                    self.last_error = last_err
                 except Exception as e:
                     self.cooldowns[p["name"]] = time.time() + self.cooldown_s
                     self.tally["failures"] += 1
                     self.tally["rotations"] += 1
                     last_err = f"{p['name']}: {str(e)[:120]}"
+                    self.last_error = last_err
             time.sleep(0.3)
 
         return {
@@ -178,3 +207,4 @@ def call_free_ai(prompt: str, **kwargs) -> Dict[str, Any]:
 if __name__ == "__main__":
     r = call_free_ai("State in one line the highest-return free AI action for continuous software development.")
     print(json.dumps(r, indent=2))
+    print("STATUS:", json.dumps(get_free_ai().get_status(), indent=2))
