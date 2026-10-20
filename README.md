@@ -1,4 +1,4 @@
-# Singularity Operator v0.5.19
+# Singularity Operator v0.5.20
 
 **Self-improving AI system** with EverythingDB, fleet orchestration, AGA metrics feedback, **deep currency experiment ranking**, and continuous upgrade from live ROI ranking — powered by a zero-cost free AI rotator.
 
@@ -28,11 +28,22 @@ Download the latest **Release** from the [Releases page](https://github.com/eric
 
 - **`singularity-operator.exe`** — single-file Windows launcher
 - Wheel / sdist for `pip install`
+- **`SHA256SUMS`** — verify downloaded release assets before use
+
+The release workflow checks that `VERSION`, `pyproject.toml`, `singularity_operator/__init__.py`, the README heading, and the pushed tag all agree. Required builds fail closed; optional executable builds are not silently ignored.
+
+After the v0.5.20 changes are merged, publish the matching tag:
 
 ```bash
-git tag v0.5.19
-git push origin v0.5.19
+git pull --ff-only origin main
+git tag v0.5.20
+git push origin v0.5.20
 ```
+
+## What's New in v0.5.20
+- Hardened release integrity checks across package metadata, runtime version, README, and Git tag.
+- Release builds fail closed instead of silently ignoring a failed secondary executable build.
+- Published SHA-256 checksums for release artifacts and narrowed workflow write permissions to the release job.
 
 ## What's New in v0.5.19
 - Deep currency experiment ranking (#43): `top_experiment` + `top_score` flow from CURRENCY_STATUS.md into `continuous_roi_rank`.
@@ -58,4 +69,4 @@ Requires `GITHUB_TOKEN` / `GH_FULL_PAT` for live AGA ingest, currency signals, a
 ## Architecture
 EverythingDB · SelfImprover (free-AI primary) · Chaos · Serendipity · Browser · Userscript · GitHubSeamless (AGA + **currency + top experiment**) · Orchestrator (continuous_roi_rank + currency_signal) · FreeAIClient
 
-*Status: v0.5.19 deep currency experiment ranking live. Ready for next auto-evolve cycle.*
+*Status: v0.5.20 release integrity checks prepared; publish only after CI passes.*
