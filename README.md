@@ -1,6 +1,6 @@
-# Singularity Operator v0.5.16
+# Singularity Operator v0.5.17
 
-**Self-improving AI system** with EverythingDB, fleet orchestration, AGA metrics feedback, and **continuous upgrade from live ROI ranking** — powered by a zero-cost free AI rotator.
+**Self-improving AI system** with EverythingDB, fleet orchestration, AGA metrics feedback, **currency fleet signal**, and continuous upgrade from live ROI ranking — powered by a zero-cost free AI rotator.
 
 ## Free AI Capacity
 
@@ -15,63 +15,43 @@ Continuous development loops use `singularity_operator/free_ai_client.py`:
 | 5        | Together free   | Optional      | Free tier                      |
 
 Seamless failover — work never pauses on rate limits or missing keys.  
-`groq_wrapper.py` routes all intelligence through this pool. SelfImprover is free-AI primary.
-`FreeAIClient.get_status()` now surfaces live available providers + tally for ROI / Orchestrator.
+`FreeAIClient.get_status()` surfaces live available providers + tally for ROI / Orchestrator.
+
+## Currency fleet signal
+
+`GitHubSeamless.fetch_currency_signals()` pulls version + capabilities from `eric847b/zero-cost-wealth-playbook-tool` (tracker, runway, experiment rank/suggest, quote).  
+Orchestrator task `currency_signal` stores the signal; `continuous_roi_rank` prefers the currency path when present.
 
 ## Releases & Windows executable
 
 Download the latest **Release** from the [Releases page](https://github.com/eric847b/singularity-operator/releases).
 
-- **`singularity-operator.exe`** — single-file Windows launcher (no separate Python install)
+- **`singularity-operator.exe`** — single-file Windows launcher
 - Wheel / sdist for `pip install`
 
-Set environment variables as needed:
 ```bash
-GROQ_API_KEY=...
-OPENROUTER_API_KEY=...   # optional free lanes
-GITHUB_TOKEN=...         # or GH_FULL_PAT
+git tag v0.5.17
+git push origin v0.5.17
 ```
 
-To cut a new release after packaging changes land:
-```bash
-git tag v0.5.16
-git push origin v0.5.16
-```
-GitHub Actions builds the EXE + packages and publishes the release automatically.
+## What's New in v0.5.17
+- Currency fleet signal wired (#43): `fetch_currency_signals` + `currency_signal` cycle task.
+- `continuous_roi_rank` records currency version/preference and prefers wealth path when signal is live.
+- Fleet sync includes zero-cost-wealth-playbook-tool.
 
 ## What's New in v0.5.16
-- Continuous upgrade cycle executed (ROI #33).
-- FreeAIClient exposes `get_status()` (available providers, cooldown, tally, keys present) for live ROI and Orchestrator consumption.
-- New cycle task `free_ai_status` records status into EverythingDB.
-- Version metadata, launcher, SelfImprover, Orchestrator fully synchronized.
-- Measurable free-AI primary progress + fleet-ready metrics surface.
+- FreeAIClient exposes `get_status()`; free_ai_status cycle task.
+- Version metadata fully synchronized; continuous upgrade (#33).
 
-## What's New in v0.5.15
-- Continuous upgrade cycle executed (ROI #33).
-- Launcher version fully synchronized with package.
-- SelfImprover now free-AI primary (no hard provider lock) + provider logging.
-- Orchestrator + metadata advanced to 0.5.15 for measurable progress.
-
-## What's New in v0.5.14
-- Free AI rotator (local + Pollinations no-key + free cloud tiers) integrated into continuous loops.
-- `free_ai_client.py` + upgraded `groq_wrapper` for zero-cost continuous refinement.
-- Auto-evolve workflow now exercises the expanded free capacity.
-
-## Quick Start (from source)
+## Quick Start
 ```bash
 pip install -e .
 python singularity_operator.py
 ```
 
-Requires `GITHUB_TOKEN` / `GH_FULL_PAT` for live AGA ingest and fleet actions.
+Requires `GITHUB_TOKEN` / `GH_FULL_PAT` for live AGA ingest, currency signals, and fleet actions.
 
 ## Architecture
-EverythingDB · SelfImprover (free-AI primary) · Chaos · Serendipity · Browser · Userscript · GitHubSeamless (fleet + AGA feedback) · Orchestrator (incl. continuous_roi_rank + free_ai_status) · **FreeAIClient**
+EverythingDB · SelfImprover (free-AI primary) · Chaos · Serendipity · Browser · Userscript · GitHubSeamless (AGA + **currency**) · Orchestrator (continuous_roi_rank + currency_signal) · FreeAIClient
 
-## Roadmap
-- Next live-ranked catalyst work after empty queue / new seeds.
-- Optional real embedding backend (feature-flagged).
-- Keep release metadata synchronized automatically before every versioned release.
-- Currency / wealth fleet signals from zero-cost-wealth-playbook-tool.
-
-*Status: v0.5.16 continuous upgrade complete. Ready for next auto-evolve cycle.*
+*Status: v0.5.17 currency fleet signal live. Ready for next auto-evolve cycle.*
