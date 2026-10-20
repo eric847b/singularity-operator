@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Free AI Client v0.5.19 — zero-cost multi-provider rotator for continuous development.
+"""Free AI Client — zero-cost multi-provider rotator for continuous development.
 
 Local-first (Ollama) → Pollinations no-key → free cloud tiers (Groq, OpenRouter, etc.).
 Seamless failover so continuous refinement never pauses on rate limits or missing keys.
 Compatible with Orchestrator, SelfImprover, EverythingDB, and autonomous agents.
 Exposes get_status() for live ROI / Orchestrator consumption.
+Version is read dynamically from package metadata or VERSION file.
 """
 
 from __future__ import annotations
