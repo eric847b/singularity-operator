@@ -1,8 +1,7 @@
-"""SingularityOrchestrator v0.5.17 - Continuous ROI + free AI + currency fleet signal.
+"""SingularityOrchestrator v0.5.18 - Continuous ROI + free AI + deepened currency fleet signal.
 
 Uses AGA-fed roi_top_ref after aga_feedback; records ranked target into EverythingDB.
-Currency path: fetch_currency_signals from zero-cost-wealth-playbook-tool and
-prefer it inside continuous_roi_rank.
+Currency path: fetch_currency_signals (CURRENCY_STATUS.md JSON) preferred inside continuous_roi_rank.
 Free AI rotator powers continuous refinement.
 """
 
@@ -125,6 +124,7 @@ class SingularityOrchestrator:
                     "version": cur.get("version"),
                     "preferred": cur.get("preferred_currency_path"),
                     "capabilities": cur.get("capabilities"),
+                    "status_file": cur.get("status_file_present"),
                     "stored_key": key,
                 })
                 self.metrics["currency_signals"] += 1
@@ -140,7 +140,9 @@ class SingularityOrchestrator:
                     "fleet_health": aga.get("fleet_last_health"),
                     "currency_version": cur.get("version"),
                     "currency_preferred": prefer_currency,
+                    "currency_status": cur.get("status"),
                     "currency_capabilities": cur.get("capabilities") or [],
+                    "currency_status_file": cur.get("status_file_present"),
                     "action": "rank_recorded",
                     "note": (
                         "Prefer currency fleet path (zero-cost-wealth runway / experiment rank/suggest) "
@@ -208,7 +210,7 @@ class SingularityOrchestrator:
         if aga or pick:
             aga_bit = f"aga_runs={aga.get('runs', '?')} roi={pick.get('roi_top_score') or aga.get('roi_top_score', '?')}:{pick.get('roi_top_ref') or aga.get('roi_top_ref', '')} fleet={aga.get('fleet_last_health', '?')} "
         fa_bit = f"free_ai_avail={fa.get('available', [])} " if fa else ""
-        cur_bit = f"currency={cur.get('version', '?')} prefer={cur.get('preferred_currency_path', False)} " if cur else ""
+        cur_bit = f"currency={cur.get('version', '?')} prefer={cur.get('preferred_currency_path', False)} status_file={cur.get('status_file_present', False)} " if cur else ""
         return (
             f"[{_utc_now()}] cycle={self.cycle_count} improvements={self.improver.improvements_made} "
             f"seqs={h.get('sequences', 0)} emb={h.get('embeddings', 0)} llm={self.db.metrics.get('llm_calls', 0)} "
@@ -222,7 +224,7 @@ class SingularityOrchestrator:
 
     def get_status(self) -> Dict[str, Any]:
         return {
-            "version": "0.5.17",
+            "version": "0.5.18",
             "cycles": self.cycle_count,
             "db_health": self.db.get_health_snapshot(),
             "aga_feedback": self.last_aga,
@@ -235,4 +237,4 @@ class SingularityOrchestrator:
         }
 
 
-print("SingularityOrchestrator v0.5.17 - Continuous ROI + currency fleet signal active")
+print("SingularityOrchestrator v0.5.18 - Continuous ROI + deepened currency fleet signal active")
