@@ -1,4 +1,4 @@
-"""Singularity Operator v0.5.17 Launcher — full cycle including AGA + currency + free AI.
+"""Singularity Operator v0.5.19 Launcher — full cycle including AGA + deep currency experiment ranking + free AI.
 """
 
 import os
@@ -37,16 +37,20 @@ def main():
     fa = get_free_ai().get_status()
     print(f"  available={fa.get('available')} tally={fa.get('tally')}")
 
-    print("\n[0b] Currency fleet signal...")
+    print("\n[0b] Currency fleet signal + top experiment...")
     cur = gh.fetch_currency_signals()
-    print(f"  version={cur.get('version')} preferred={cur.get('preferred_currency_path')} caps={cur.get('capabilities')}")
+    print(
+        f"  version={cur.get('version')} preferred={cur.get('preferred_currency_path')} "
+        f"top_exp={cur.get('top_experiment')} top_score={cur.get('top_score')} "
+        f"caps={cur.get('capabilities')}"
+    )
 
     print("\n[1] Propose + evolve...")
-    db.propose_unknown("core self-improvement + singularity + currency", 3)
-    improver.evolve("def core_v1(): return 'v1'", goal=f"compact + AGA + currency + free AI v{__version__}")
+    db.propose_unknown("core self-improvement + singularity + currency experiment ranking", 3)
+    improver.evolve("def core_v1(): return 'v1'", goal=f"compact + AGA + currency experiment ranking + free AI v{__version__}")
 
     print("\n[2] Vector demo...")
-    demo = db.demo_vector_query("self improve serendipity singularity currency")
+    demo = db.demo_vector_query("self improve serendipity singularity currency experiment")
     print(f"  hits={demo.get('hits')}")
 
     print("\n[3] AGA metrics feedback ingest...")
@@ -69,7 +73,7 @@ def main():
     print("Cycle tasks:", [r.get("task") for r in cycle_results])
     print("Summary:", orch.evolution_summary())
 
-    print(f"\n=== v{__version__} complete. AGA + currency fleet signal + free AI operational. ===")
+    print(f"\n=== v{__version__} complete. AGA + deep currency experiment ranking + free AI operational. ===")
 
 
 if __name__ == "__main__":

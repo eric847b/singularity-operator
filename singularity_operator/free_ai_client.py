@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Free AI Client v0.5.16 — zero-cost multi-provider rotator for continuous development.
+"""Free AI Client v0.5.19 — zero-cost multi-provider rotator for continuous development.
 
 Local-first (Ollama) → Pollinations no-key → free cloud tiers (Groq, OpenRouter, etc.).
 Seamless failover so continuous refinement never pauses on rate limits or missing keys.
@@ -99,7 +99,7 @@ class FreeAIClient:
         available = [p["name"] for p in providers if self._available(p)]
         cooled = [name for name, until in self.cooldowns.items() if time.time() < until]
         return {
-            "version": "0.5.16",
+            "version": "0.5.19",
             "available": available,
             "cooled_down": cooled,
             "tally": dict(self.tally),
