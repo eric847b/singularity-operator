@@ -12,6 +12,8 @@ from __future__ import annotations
 import os
 import time
 import json
+from importlib import metadata
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -19,6 +21,14 @@ import requests
 
 def _env(key: str, default: str = "") -> str:
     return (os.getenv(key) or default).strip()
+
+
+def _package_version() -> str:
+    try:
+        return metadata.version("singularity-operator")
+    except metadata.PackageNotFoundError:
+        version_file = Path(__file__).resolve().parents[1] / "VERSION"
+        return version_file.read_text(encoding="utf-8").strip() if version_file.is_file() else "unknown"
 
 
 class FreeAIClient:
@@ -99,7 +109,7 @@ class FreeAIClient:
         available = [p["name"] for p in providers if self._available(p)]
         cooled = [name for name, until in self.cooldowns.items() if time.time() < until]
         return {
-            "version": "0.5.19",
+            "version": _package_version(),
             "available": available,
             "cooled_down": cooled,
             "tally": dict(self.tally),
