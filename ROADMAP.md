@@ -21,11 +21,11 @@ Objectives:
 Success Criteria:
 
 - Architecture documented ✅ (`docs/architecture/`)
-- CI consistently green (ongoing)
+- CI consistently green (ongoing; quality-gate expanded)
 - Module boundaries defined ✅ (`docs/architecture/module-contracts.md`)
 - Dependency graph generated ✅ (`docs/architecture/dependency-inventory.md`)
 
-Remaining: broaden automated tests beyond free_ai_client smoke; keep governance policy current.
+Remaining: broaden coverage beyond free_ai + validation + provenance tests.
 
 ---
 
@@ -42,9 +42,11 @@ Objectives:
 
 Success Criteria:
 
-- Memory model documented ✅ (storage / indexing / provenance from live EverythingDB)
-- Validation rules operational (baseline AST + draft-only ranking documented; full pipeline next)
-- Knowledge dependencies traceable (tags + timestamps live; explicit parent links next)
+- Memory model documented ✅
+- Validation rules operational ✅ (shared `validation.py` + SelfImprover + quality-gate)
+- Knowledge dependencies traceable ✅ (`parent_key` / `derives_from`, get_children, ROI↔currency link)
+
+Next inside Phase 2: multi-hop export, validation_status field, richer agent proposal gates.
 
 ---
 
@@ -88,10 +90,10 @@ Success Criteria:
 
 ## Current Priority Stack
 
-1. Documentation consolidation ✅ (initial)
-2. Architecture specification ✅ (contracts + inventory)
-3. Memory subsystem (deepen provenance + parent links)
-4. Validation layer (extract shared validators; CI hooks)
+1. Documentation consolidation ✅
+2. Architecture specification ✅
+3. Memory subsystem ✅ (baseline + provenance links)
+4. Validation layer ✅ (shared module + CI invariants)
 5. Agent autonomy
 6. Ecosystem integration
 7. New feature expansion
