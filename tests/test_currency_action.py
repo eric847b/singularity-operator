@@ -12,6 +12,9 @@ def test_plan_defaults_to_setup_session_offer():
     assert action["expected_revenue"] == 149
     assert action["steps"]
     assert action["policy"]["never_mark_won_without_payment"] is True
+    assert action["policy"]["no_human_required"] is True
+    assert action["policy"]["no_simulated_income"] is True
+    assert action["mode"] == "autonomous"
     assert action["hub_handoff"]["canonical_entry"] == "eric847b/AI-Collaboration-Hub"
 
 
@@ -31,7 +34,7 @@ def test_summary_line():
     action = plan_next_action({"top_experiment": "template-pack-listing", "top_score": 39.5})
     line = action_summary_line(action)
     assert "template-pack-listing" in line
-    assert "39.5" in line or "39.50" in line
+    assert "autonomous" in line
 
 
 def test_playbook_covers_live_ranked():
