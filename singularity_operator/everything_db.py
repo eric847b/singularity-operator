@@ -1,10 +1,11 @@
-"""EverythingDB v0.5.19 - Universal sequence store + optional vector similarity.
+"""EverythingDB v0.5.20 - Universal sequence store + optional vector similarity + provenance.
 
 Zero-dep default: bag-of-words hashing embeddings + cosine similarity.
 Feature flag `enable_vectors` (default True; no external models).
 Optional multi-modal tag support (text / code / image_ref / audio_ref).
+Provenance: optional parent_key and derives_from for sequence lineage.
 
-Aligned with Singularity Operator v0.5.19: prioritizes sequences that complete
+Aligned with Singularity Operator: prioritizes sequences that complete
 unknowns toward singularity and the preferred currency path.
 """
 
@@ -100,20 +101,26 @@ class EverythingDB:
             "vector_queries": 0,
             "vector_hits": 0,
         }
-        self.health = {"status": "healthy", "last_check": _utc_now(), "version": "0.5.19"}
+        self.health = {"status": "healthy", "last_check": _utc_now(), "version": "0.5.20"}
         self._load_persisted_metrics()
 
     def _init_tables(self):
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS sequences "
-            "(key TEXT PRIMARY KEY, value TEXT, timestamp TEXT, tags TEXT, modality TEXT DEFAULT 'text')"
+            "(key TEXT PRIMARY KEY, value TEXT, timestamp TEXT, tags TEXT, "
+            "modality TEXT DEFAULT 'text', parent_key TEXT, derives_from TEXT)"
         )
-        # migrate: add modality column if older DB
-        try:
-            self.conn.execute("ALTER TABLE sequences ADD COLUMN modality TEXT DEFAULT 'text'")
-            self.conn.commit()
-        except sqlite3.OperationalError:
-            pass
+        # migrate older DBs
+        for col, decl in [
+            ("modality", "TEXT DEFAULT 'text'"),
+            ("parent_key", "TEXT"),
+            ("derives_from", "TEXT"),
+        ]:
+            try:
+                self.conn.execute(f"ALTER TABLE sequences ADD COLUMN {col} {decl}")
+                self.conn.commit()
+            except sqlite3.OperationalError:
+                pass
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS groq_cache (prompt TEXT PRIMARY KEY, response TEXT, timestamp TEXT)"
         )
@@ -186,17 +193,81 @@ class EverythingDB:
         seq: Any,
         tags: str = "general",
         modality: str = "text",
+        parent_key: Optional[str] = None,
+        derives_from: Optional[str] = None,
     ) -> str:
-        """Add a sequence. modality: text | code | image_ref | audio_ref | multi."""
+        """Add a sequence. modality: text | code | image_ref | audio_ref | multi.
+
+        Provenance:
+        - parent_key: direct parent sequence key (lineage)
+        - derives_from: free-form source ref (e.g. task name, external id)
+        """
         key = str(hash(json.dumps(seq, sort_keys=True) if isinstance(seq, (dict, list)) else str(seq)))
         self.conn.execute(
-            "INSERT OR REPLACE INTO sequences VALUES (?, ?, ?, ?, ?)",
-            (key, json.dumps(seq), _utc_now(), tags, modality),
+            "INSERT OR REPLACE INTO sequences "
+            "(key, value, timestamp, tags, modality, parent_key, derives_from) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                key,
+                json.dumps(seq),
+                _utc_now(),
+                tags,
+                modality,
+                parent_key,
+                derives_from,
+            ),
         )
         self.conn.commit()
         self.metrics["sequences_added"] += 1
         self._store_embedding(key, seq, modality=modality)
         return key
+
+    def get_sequence(self, key: str) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute(
+            "SELECT key, value, timestamp, tags, modality, parent_key, derives_from "
+            "FROM sequences WHERE key=?",
+            (key,),
+        ).fetchone()
+        if not row:
+            return None
+        try:
+            value = json.loads(row[1])
+        except Exception:
+            value = row[1]
+        return {
+            "key": row[0],
+            "value": value,
+            "timestamp": row[2],
+            "tags": row[3],
+            "modality": row[4] or "text",
+            "parent_key": row[5],
+            "derives_from": row[6],
+        }
+
+    def get_children(self, parent_key: str, limit: int = 20) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT key, value, timestamp, tags, modality, parent_key, derives_from "
+            "FROM sequences WHERE parent_key=? ORDER BY timestamp DESC LIMIT ?",
+            (parent_key, limit),
+        ).fetchall()
+        out: List[Dict[str, Any]] = []
+        for row in rows:
+            try:
+                value = json.loads(row[1])
+            except Exception:
+                value = row[1]
+            out.append(
+                {
+                    "key": row[0],
+                    "value": value,
+                    "timestamp": row[2],
+                    "tags": row[3],
+                    "modality": row[4] or "text",
+                    "parent_key": row[5],
+                    "derives_from": row[6],
+                }
+            )
+        return out
 
     def similarity_search(
         self,
@@ -231,7 +302,8 @@ class EverythingDB:
         results: List[Dict[str, Any]] = []
         for score, key, mod in scored[:top_k]:
             row = self.conn.execute(
-                "SELECT value, tags, timestamp FROM sequences WHERE key=?", (key,)
+                "SELECT value, tags, timestamp, parent_key, derives_from FROM sequences WHERE key=?",
+                (key,),
             ).fetchone()
             if not row:
                 continue
@@ -247,6 +319,8 @@ class EverythingDB:
                     "tags": row[1],
                     "timestamp": row[2],
                     "value": value,
+                    "parent_key": row[3],
+                    "derives_from": row[4],
                 }
             )
         if results:
@@ -320,13 +394,14 @@ class EverythingDB:
                 "runway_velocity_transistor",
             ]
         for seq in sequences:
-            self.add_sequence(seq, tags=f"proposed:{domain}")
+            self.add_sequence(seq, tags=f"proposed:{domain}", derives_from="propose_unknown")
         self._save_to_cache(prompt, json.dumps(sequences))
         if hash(domain) % 7 == 0:
             self.metrics["serendipity_captures"] += 1
             self.add_sequence(
                 {"serendipity": "unexpected connection found", "domain": domain},
                 "serendipity",
+                derives_from="propose_unknown",
             )
         return sequences
 
@@ -334,6 +409,9 @@ class EverythingDB:
         seq_count = self.conn.execute("SELECT COUNT(*) FROM sequences").fetchone()[0]
         cache_count = self.conn.execute("SELECT COUNT(*) FROM groq_cache").fetchone()[0]
         emb_count = self.conn.execute("SELECT COUNT(*) FROM embeddings").fetchone()[0]
+        with_parent = self.conn.execute(
+            "SELECT COUNT(*) FROM sequences WHERE parent_key IS NOT NULL AND parent_key != ''"
+        ).fetchone()[0]
         tag_rows = self.conn.execute(
             "SELECT tags, COUNT(*) FROM sequences GROUP BY tags ORDER BY COUNT(*) DESC LIMIT 8"
         ).fetchall()
@@ -342,9 +420,10 @@ class EverythingDB:
             {
                 "status": "healthy",
                 "last_check": _utc_now(),
-                "version": "0.5.19",
+                "version": "0.5.20",
                 "sequences": seq_count,
                 "embeddings": emb_count,
+                "with_parent": with_parent,
                 "enable_vectors": self.enable_vectors,
                 "vector_dim": self.vector_dim,
                 "cache_entries": cache_count,
@@ -362,6 +441,7 @@ class EverythingDB:
             "cache": False,
             "persist": False,
             "vectors": False,
+            "provenance": False,
         }
         try:
             props = self.propose_unknown("test singularity currency", 1)
@@ -374,6 +454,13 @@ class EverythingDB:
                 tests["vectors"] = demo.get("hits", 0) >= 0
             else:
                 tests["vectors"] = True
+            parent = self.add_sequence({"kind": "parent"}, tags="test:parent")
+            child = self.add_sequence(
+                {"kind": "child"}, tags="test:child", parent_key=parent, derives_from="self_test"
+            )
+            got = self.get_sequence(child)
+            kids = self.get_children(parent)
+            tests["provenance"] = bool(got and got.get("parent_key") == parent and any(k["key"] == child for k in kids))
         except Exception as e:
             tests["error"] = str(e)[:200]
         return tests
@@ -394,4 +481,4 @@ class EverythingDB:
         return {"recovered": True, "type": failure_type, "new_resilience": "+10%"}
 
 
-print("EverythingDB v0.5.19 - Universal sequence store + singularity/currency bias ready")
+print("EverythingDB v0.5.20 - Universal sequence store + provenance ready")
