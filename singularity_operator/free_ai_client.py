@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Free AI Client — zero-cost multi-provider rotator for continuous development.
 
-Local-first (Ollama) → Pollinations no-key → free cloud tiers (Groq, OpenRouter, etc.).
+Local-first (Ollama) → Pollinations no-key → free cloud tiers (Groq, OpenRouter, Gemini, …).
 Seamless failover so continuous refinement never pauses on rate limits or missing keys.
-Compatible with Orchestrator, SelfImprover, EverythingDB, and autonomous agents.
-Exposes get_status() for live ROI / Orchestrator consumption.
-Version is read dynamically from package metadata or VERSION file.
+Autonomous contract: no human required; never invent payment or completed sales.
 """
 
 from __future__ import annotations
@@ -18,6 +16,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import requests
+
+_AUTONOMOUS_SYSTEM = (
+    "You are a high-leverage autonomous continuous development agent. "
+    "Produce maximum functional progress with free resources. "
+    "No human operator is available. Never invent payment, revenue, or completed sales."
+)
 
 
 def _env(key: str, default: str = "") -> str:
@@ -39,7 +43,7 @@ class FreeAIClient:
         self.timeout = timeout
         self.tally = {"calls": 0, "failures": 0, "rotations": 0, "successes": 0}
         self.cooldowns: Dict[str, float] = {}
-        self.cooldown_s = 60.0
+        self.cooldown_s = float(_env("FREE_AI_COOLDOWN_S", "60") or "60")
         self.last_provider: Optional[str] = None
         self.last_error: Optional[str] = None
 
@@ -85,6 +89,17 @@ class FreeAIClient:
                 "key_env": "OPENROUTER_API_KEY",
             },
             {
+                "name": "gemini",
+                "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                "model": _env("GEMINI_MODEL", "gemini-2.0-flash"),
+                "headers": lambda: {
+                    "Authorization": f"Bearer {_env('GEMINI_API_KEY')}",
+                    "Content-Type": "application/json",
+                },
+                "key_required": True,
+                "key_env": "GEMINI_API_KEY",
+            },
+            {
                 "name": "together",
                 "url": "https://api.together.xyz/v1/chat/completions",
                 "model": _env("TOGETHER_MODEL", "meta-llama/Meta-Llama-3.1-8b-instruct-turbo"),
@@ -111,6 +126,7 @@ class FreeAIClient:
         cooled = [name for name, until in self.cooldowns.items() if time.time() < until]
         return {
             "version": _package_version(),
+            "mode": "autonomous",
             "available": available,
             "cooled_down": cooled,
             "tally": dict(self.tally),
@@ -121,6 +137,7 @@ class FreeAIClient:
             "keys_present": {
                 "GROQ_API_KEY": bool(_env("GROQ_API_KEY")),
                 "OPENROUTER_API_KEY": bool(_env("OPENROUTER_API_KEY")),
+                "GEMINI_API_KEY": bool(_env("GEMINI_API_KEY")),
                 "TOGETHER_API_KEY": bool(_env("TOGETHER_API_KEY")),
             },
         }
@@ -128,7 +145,7 @@ class FreeAIClient:
     def complete(
         self,
         prompt: str,
-        system: str = "You are a high-leverage continuous development agent. Produce maximum functional progress with free resources.",
+        system: str = _AUTONOMOUS_SYSTEM,
         max_tokens: int = 1024,
         temperature: float = 0.7,
     ) -> Dict[str, Any]:
@@ -158,7 +175,7 @@ class FreeAIClient:
                         json=payload,
                         timeout=self.timeout,
                     )
-                    if resp.status_code >= 200 and resp.status_code < 300:
+                    if 200 <= resp.status_code < 300:
                         data = resp.json()
                         content = (
                             data.get("choices", [{}])[0]
@@ -178,7 +195,6 @@ class FreeAIClient:
                                 "tally": dict(self.tally),
                                 "raw": data,
                             }
-                    # non-success → cool down and rotate
                     self.cooldowns[p["name"]] = time.time() + self.cooldown_s
                     self.tally["failures"] += 1
                     self.tally["rotations"] += 1
@@ -196,10 +212,10 @@ class FreeAIClient:
             "error": f"All free AI providers exhausted: {last_err}",
             "tally": dict(self.tally),
             "providers_tried": [p["name"] for p in providers],
+            "mode": "autonomous",
         }
 
 
-# Convenience singleton-style helper used by wrappers
 _default_client: Optional[FreeAIClient] = None
 
 
