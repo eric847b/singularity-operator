@@ -4,6 +4,7 @@ Zero-dep default: bag-of-words hashing embeddings + cosine similarity.
 Feature flag `enable_vectors` (default True; no external models).
 Optional multi-modal tag support (text / code / image_ref / audio_ref).
 Provenance: optional parent_key and derives_from for sequence lineage.
+Multi-hop: walk_ancestors + export_lineage.
 
 Aligned with Singularity Operator: prioritizes sequences that complete
 unknowns toward singularity and the preferred currency path.
@@ -269,6 +270,62 @@ class EverythingDB:
             )
         return out
 
+    def walk_ancestors(self, key: str, max_depth: int = 16) -> List[Dict[str, Any]]:
+        """Walk parent_key chain from key toward roots. Returns [self, parent, ...]."""
+        chain: List[Dict[str, Any]] = []
+        seen = set()
+        current: Optional[str] = key
+        depth = 0
+        while current and depth < max_depth and current not in seen:
+            seen.add(current)
+            node = self.get_sequence(current)
+            if not node:
+                break
+            chain.append(node)
+            current = node.get("parent_key") or None
+            depth += 1
+        return chain
+
+    def export_lineage(
+        self,
+        key: str,
+        *,
+        max_depth: int = 16,
+        include_children: bool = True,
+        child_limit: int = 20,
+    ) -> Dict[str, Any]:
+        """Multi-hop provenance export: ancestors + optional direct children."""
+        ancestors = self.walk_ancestors(key, max_depth=max_depth)
+        root = ancestors[-1] if ancestors else None
+        children: List[Dict[str, Any]] = []
+        if include_children:
+            children = self.get_children(key, limit=child_limit)
+        return {
+            "key": key,
+            "depth": max(0, len(ancestors) - 1),
+            "ancestors": [
+                {
+                    "key": a["key"],
+                    "tags": a.get("tags"),
+                    "derives_from": a.get("derives_from"),
+                    "timestamp": a.get("timestamp"),
+                    "parent_key": a.get("parent_key"),
+                }
+                for a in ancestors
+            ],
+            "root_key": root["key"] if root else None,
+            "children": [
+                {
+                    "key": c["key"],
+                    "tags": c.get("tags"),
+                    "derives_from": c.get("derives_from"),
+                    "timestamp": c.get("timestamp"),
+                }
+                for c in children
+            ],
+            "exported_at": _utc_now(),
+        }
+
     def similarity_search(
         self,
         query: Any,
@@ -442,6 +499,7 @@ class EverythingDB:
             "persist": False,
             "vectors": False,
             "provenance": False,
+            "lineage": False,
         }
         try:
             props = self.propose_unknown("test singularity currency", 1)
@@ -461,6 +519,8 @@ class EverythingDB:
             got = self.get_sequence(child)
             kids = self.get_children(parent)
             tests["provenance"] = bool(got and got.get("parent_key") == parent and any(k["key"] == child for k in kids))
+            lin = self.export_lineage(child)
+            tests["lineage"] = lin.get("depth", 0) >= 1 and lin.get("root_key") == parent
         except Exception as e:
             tests["error"] = str(e)[:200]
         return tests
@@ -481,4 +541,4 @@ class EverythingDB:
         return {"recovered": True, "type": failure_type, "new_resilience": "+10%"}
 
 
-print("EverythingDB v0.5.20 - Universal sequence store + provenance ready")
+print("EverythingDB v0.5.20 - Universal sequence store + multi-hop provenance ready")
