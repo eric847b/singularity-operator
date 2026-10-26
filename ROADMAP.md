@@ -20,10 +20,12 @@ Objectives:
 
 Success Criteria:
 
-- Architecture documented
-- CI consistently green
-- Module boundaries defined
-- Dependency graph generated
+- Architecture documented ✅ (`docs/architecture/`)
+- CI consistently green (ongoing)
+- Module boundaries defined ✅ (`docs/architecture/module-contracts.md`)
+- Dependency graph generated ✅ (`docs/architecture/dependency-inventory.md`)
+
+Remaining: broaden automated tests beyond free_ai_client smoke; keep governance policy current.
 
 ---
 
@@ -40,9 +42,9 @@ Objectives:
 
 Success Criteria:
 
-- Memory model documented
-- Validation rules operational
-- Knowledge dependencies traceable
+- Memory model documented ✅ (storage / indexing / provenance from live EverythingDB)
+- Validation rules operational (baseline AST + draft-only ranking documented; full pipeline next)
+- Knowledge dependencies traceable (tags + timestamps live; explicit parent links next)
 
 ---
 
@@ -86,10 +88,10 @@ Success Criteria:
 
 ## Current Priority Stack
 
-1. Documentation consolidation
-2. Architecture specification
-3. Memory subsystem
-4. Validation layer
+1. Documentation consolidation ✅ (initial)
+2. Architecture specification ✅ (contracts + inventory)
+3. Memory subsystem (deepen provenance + parent links)
+4. Validation layer (extract shared validators; CI hooks)
 5. Agent autonomy
 6. Ecosystem integration
 7. New feature expansion
