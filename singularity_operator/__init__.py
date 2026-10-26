@@ -1,16 +1,12 @@
 """Singularity Operator v0.5.20 - Ultimate self-improving AI system.
 
-v0.5.20: Release integrity — validate source/package/docs/tag version parity; fail closed on executable build errors; publish SHA-256 checksums.
-         Shared validation; EverythingDB parent_key/derives_from + multi-hop export_lineage;
-         AgentProposalWorkflow (propose→validate→store); Orchestrator ROI↔currency + agent_propose.
-v0.5.19: Deep currency experiment ranking (#43) — top_experiment + top_score from CURRENCY_STATUS.md JSON flow into continuous_roi_rank; hard bias to highest expected $/effort open experiment.
-v0.5.18: Deepen currency signal (#43) — fetch_currency_signals parses CURRENCY_STATUS.md JSON block from wealth repo.
-v0.5.17: Currency fleet signal (#43) — GitHubSeamless.fetch_currency_signals + Orchestrator currency_signal task + continuous_roi_rank prefers wealth path.
-v0.5.16: Continuous upgrade (#33) — FreeAIClient exposes get_status() + live provider tally; free-AI primary hardened.
-v0.5.15: Continuous upgrade cycle — launcher synced, SelfImprover prefers free AI rotator.
-v0.5.14: Free AI rotator fully integrated for zero-cost continuous refinement.
-v0.5.11: Continuous upgrade from live ROI ranking (AGA roi_top_ref).
-v0.5.10: AGA Actions → singularity-operator metrics feedback loop.
+v0.5.20: Release integrity; shared validation; multi-hop provenance; AgentProposalWorkflow;
+         currency_next_action (top_experiment → concrete steps); hub-first fleet_sync.
+v0.5.19: Deep currency experiment ranking (#43).
+v0.5.18: Deepen currency signal (#43).
+v0.5.17: Currency fleet signal (#43).
+v0.5.16: FreeAIClient get_status + live provider tally.
+v0.5.15–v0.5.10: Free AI rotator, ROI ranking, AGA feedback loop.
 """
 
 from .everything_db import EverythingDB
@@ -30,6 +26,7 @@ from .validation import (
     is_valid_python,
 )
 from .agent_proposals import AgentProposalWorkflow, run_proposal_cycle
+from .currency_action import plan_next_action, action_summary_line
 
 __version__ = "0.5.20"
 __all__ = [
@@ -52,4 +49,6 @@ __all__ = [
     "is_valid_python",
     "AgentProposalWorkflow",
     "run_proposal_cycle",
+    "plan_next_action",
+    "action_summary_line",
 ]
