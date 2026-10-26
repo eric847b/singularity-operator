@@ -20,12 +20,10 @@ Objectives:
 
 Success Criteria:
 
-- Architecture documented ✅ (`docs/architecture/`)
+- Architecture documented ✅
 - CI consistently green (ongoing; quality-gate expanded)
-- Module boundaries defined ✅ (`docs/architecture/module-contracts.md`)
-- Dependency graph generated ✅ (`docs/architecture/dependency-inventory.md`)
-
-Remaining: broaden coverage beyond free_ai + validation + provenance tests.
+- Module boundaries defined ✅
+- Dependency graph generated ✅
 
 ---
 
@@ -43,10 +41,8 @@ Objectives:
 Success Criteria:
 
 - Memory model documented ✅
-- Validation rules operational ✅ (shared `validation.py` + SelfImprover + quality-gate)
-- Knowledge dependencies traceable ✅ (`parent_key` / `derives_from`, get_children, ROI↔currency link)
-
-Next inside Phase 2: multi-hop export, validation_status field, richer agent proposal gates.
+- Validation rules operational ✅
+- Knowledge dependencies traceable ✅ (parent links + multi-hop `export_lineage`)
 
 ---
 
@@ -63,9 +59,11 @@ Objectives:
 
 Success Criteria:
 
-- Agent-generated proposals
-- Safe review workflow
-- Evolution metrics dashboard
+- Agent-generated proposals ✅ baseline (`AgentProposalWorkflow` + Orchestrator `agent_propose`)
+- Safe review workflow ✅ (validate then store; draft-only ROI)
+- Evolution metrics dashboard (partial via evolution_summary / reports)
+
+Next: richer review agents, scoring dashboard, automated refactor suggestions gated by validation.
 
 ---
 
@@ -92,8 +90,8 @@ Success Criteria:
 
 1. Documentation consolidation ✅
 2. Architecture specification ✅
-3. Memory subsystem ✅ (baseline + provenance links)
-4. Validation layer ✅ (shared module + CI invariants)
-5. Agent autonomy
+3. Memory subsystem ✅
+4. Validation layer ✅
+5. Agent autonomy ✅ baseline
 6. Ecosystem integration
 7. New feature expansion

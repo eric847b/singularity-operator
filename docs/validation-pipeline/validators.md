@@ -4,30 +4,25 @@
 
 | Helper | Role |
 |--------|------|
-| `validate_python_evolution(original, candidate)` | Accept/reject evolved Python (non-empty, parses, optional AST change) |
+| `validate_python_evolution(original, candidate)` | Accept/reject evolved Python |
 | `ast_equivalent(a, b)` | Whitespace-insensitive AST equality |
 | `is_valid_python(source)` | Syntax check |
 | `validate_sequence_payload(value)` | Lightweight type gate for knowledge units |
 | `ValidationResult` | Structured ok/reason/detail |
 
+## Agent proposals: `singularity_operator/agent_proposals.py`
+
+Pipeline: **propose → validate → store**
+
+- `AgentProposalWorkflow.propose` — candidates via EverythingDB.propose_unknown
+- `validate_proposal` — sequence payload or Python evolution checks
+- `store_accepted` — writes with parent_key / derives_from
+- `run` — full batch with lineage + run report
+
 ## SelfImprover
 
-Uses `validate_python_evolution` exclusively for accept/reject. On failure keeps original and logs reason (`empty`, `no_change`, `syntax_error`). On success writes sequence with validation payload.
-
-## Orchestrator
-
-Does not force semantic validation on free-AI text; relies on draft-only ROI notes and structured storage with provenance links.
+Uses `validate_python_evolution` exclusively for accept/reject.
 
 ## Quality gate
 
-`.github/workflows/quality-gate.yml` asserts:
-
-- SelfImprover imports and calls shared validation
-- validation.py defines core helpers
-- EverythingDB exposes parent_key / derives_from / get_sequence / get_children
-- Orchestrator links ROI rank to currency parent key
-
-## Next
-
-- Optional free-AI review step with policy gates
-- CI-consumable pass/fail artifacts for agent proposals
+Asserts validation module, provenance multi-hop APIs, AgentProposalWorkflow, and Orchestrator `agent_propose` wiring.

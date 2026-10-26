@@ -1,9 +1,10 @@
-"""SingularityOrchestrator v0.5.20 - Continuous ROI + free AI + deep currency experiment ranking + provenance.
+"""SingularityOrchestrator v0.5.20 - Continuous ROI + free AI + deep currency experiment ranking + provenance + agent proposals.
 
 Uses AGA-fed roi_top_ref after aga_feedback; records ranked target into EverythingDB.
 Currency path: fetch_currency_signals (CURRENCY_STATUS.md JSON + top_experiment/top_score)
 hard-biased inside continuous_roi_rank toward highest expected $/effort open experiment.
 ROI rank sequences parent-link to currency signal sequences when available.
+agent_propose runs propose → validate → store with lineage.
 Free AI rotator powers continuous refinement.
 """
 
@@ -18,6 +19,7 @@ from .serendipity_engine import SerendipityEngine
 from .browser_automation import BrowserAutomation
 from .userscript_gen import UserscriptGenerator
 from .free_ai_client import get_free_ai
+from .agent_proposals import AgentProposalWorkflow
 
 
 def _utc_now() -> str:
@@ -33,6 +35,7 @@ class SingularityOrchestrator:
         self.serendipity = SerendipityEngine(db=self.db)
         self.browser = BrowserAutomation(headless=True)
         self.userscript = UserscriptGenerator()
+        self.proposals = AgentProposalWorkflow(db=self.db)
         self.cycle_count = 0
         self.metrics = {
             "cycles": 0,
@@ -47,6 +50,7 @@ class SingularityOrchestrator:
             "aga_feedbacks": 0,
             "roi_ranks": 0,
             "currency_signals": 0,
+            "agent_proposals": 0,
         }
         self.last_summary: str = ""
         self.last_aga: Optional[Dict[str, Any]] = None
@@ -54,12 +58,14 @@ class SingularityOrchestrator:
         self.last_free_ai_status: Optional[Dict[str, Any]] = None
         self.last_currency: Optional[Dict[str, Any]] = None
         self.last_currency_key: Optional[str] = None
+        self.last_proposal_report: Optional[Dict[str, Any]] = None
 
     def run_orchestrated_cycle(self, tasks: List[str] = None) -> List[Dict[str, Any]]:
         if tasks is None:
             tasks = [
                 "self_improve_core",
                 "propose_unknown_sequences",
+                "agent_propose",
                 "serendipity_cycle",
                 "chaos_resilience_test",
                 "browser_userscript_test",
@@ -93,6 +99,21 @@ class SingularityOrchestrator:
             elif task == "propose_unknown_sequences":
                 seqs = self.db.propose_unknown("singularity acceleration + currency experiment ranking", 3)
                 results.append({"task": task, "sequences": seqs[:2]})
+            elif task == "agent_propose":
+                report = self.proposals.run(
+                    domain="singularity acceleration + currency experiment ranking",
+                    n=3,
+                    parent_key=self.last_currency_key,
+                )
+                self.last_proposal_report = report
+                results.append({
+                    "task": task,
+                    "generated": report.get("generated"),
+                    "accepted": report.get("accepted"),
+                    "rejected": report.get("rejected"),
+                    "batch_parent": report.get("batch_parent"),
+                })
+                self.metrics["agent_proposals"] += int(report.get("accepted") or 0)
             elif task == "serendipity_cycle":
                 ser = self.serendipity.run_cycle(connections=4, amplifications=3, deep=True)
                 results.append({"task": task, "captures": ser["captures"], "connections": ser["connections_found"], "summary": self.serendipity.summary_line()})
@@ -221,6 +242,7 @@ class SingularityOrchestrator:
                     "roi_pick": self.last_roi_pick,
                     "currency": self.last_currency,
                     "free_ai": self.last_free_ai_status,
+                    "proposal_report": self.last_proposal_report,
                     "gh": self.gh.get_metrics(),
                 }
                 pub = self.gh.publish_evolution_report(summary, extra=extra)
@@ -260,6 +282,7 @@ class SingularityOrchestrator:
             f"serendipity={self.serendipity.captures}/{self.serendipity.connections_found} "
             f"{aga_bit}{fa_bit}{cur_bit}"
             f"roi_ranks={self.metrics.get('roi_ranks', 0)} currency_signals={self.metrics.get('currency_signals', 0)} "
+            f"agent_proposals={self.metrics.get('agent_proposals', 0)} "
             f"aga_ingests={self.gh.metrics.get('aga_ingests', 0)} fleet_syncs={self.metrics.get('fleet_syncs', 0)} | "
             f"{self.improver.learning_summary_line()} | {self.chaos.summary_line()} | {self.serendipity.summary_line()}"
         )
@@ -273,10 +296,11 @@ class SingularityOrchestrator:
             "roi_pick": self.last_roi_pick,
             "currency": self.last_currency,
             "free_ai_status": self.last_free_ai_status,
+            "proposal_report": self.last_proposal_report,
             "metrics": self.metrics,
             "gh_metrics": self.gh.get_metrics(),
             "last_summary": self.last_summary or self.evolution_summary(),
         }
 
 
-print("SingularityOrchestrator v0.5.20 - Continuous ROI + provenance links active")
+print("SingularityOrchestrator v0.5.20 - Continuous ROI + agent proposals + provenance active")

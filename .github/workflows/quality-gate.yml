@@ -26,7 +26,7 @@ jobs:
         run: python -m pip install -e '.[test]'
       - name: Compile all Python
         run: python -m compileall -q .
-      - name: Verify evolution safety and provenance invariants
+      - name: Verify evolution safety, provenance, and agent proposal invariants
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -45,22 +45,32 @@ jobs:
           assert 'def validate_python_evolution' in v
           assert 'def ast_equivalent' in v
 
-          # EverythingDB provenance columns + APIs
+          # EverythingDB provenance + multi-hop
           e = Path('singularity_operator/everything_db.py').read_text()
           ast.parse(e)
           assert 'parent_key' in e
           assert 'derives_from' in e
           assert 'def get_children' in e
           assert 'def get_sequence' in e
+          assert 'def walk_ancestors' in e
+          assert 'def export_lineage' in e
 
-          # Orchestrator improvement accounting + currency parent link
+          # Agent proposal workflow
+          a = Path('singularity_operator/agent_proposals.py').read_text()
+          ast.parse(a)
+          assert 'class AgentProposalWorkflow' in a
+          assert 'def run(' in a
+
+          # Orchestrator improvement accounting + currency parent + agent_propose
           o = Path('singularity_operator/orchestrator.py').read_text()
           ast.parse(o)
           assert 'actual = self.improver.improvements_made - before' in o
           assert 'self.metrics["improvements"] += actual' in o
           assert 'parent_key=self.last_currency_key' in o
+          assert 'agent_propose' in o
+          assert 'AgentProposalWorkflow' in o
 
-          print('Evolution safety + provenance invariants verified')
+          print('Evolution safety + provenance + agent proposal invariants verified')
           PY
       - name: Run tests when present
         shell: bash

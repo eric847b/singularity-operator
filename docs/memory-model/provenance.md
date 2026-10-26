@@ -18,21 +18,23 @@ EverythingDB sequences support optional lineage fields:
 - `add_sequence(..., parent_key=None, derives_from=None)`
 - `get_sequence(key) -> dict | None`
 - `get_children(parent_key, limit=20) -> list`
+- `walk_ancestors(key, max_depth=16) -> list` — self → … → root
+- `export_lineage(key, max_depth=16, include_children=True) -> dict` — multi-hop export
 - Health snapshot includes `with_parent` count
 
 ### Orchestrator usage
 
 - `currency_signal` stores the fleet signal and remembers `last_currency_key`
-- `continuous_roi_rank` writes the ROI pick with `parent_key=last_currency_key` and `derives_from="continuous_roi_rank"`
+- `continuous_roi_rank` writes the ROI pick with `parent_key=last_currency_key`
+- `agent_propose` runs AgentProposalWorkflow; accepted proposals parent to batch (and optionally currency)
 - Cycle metrics and many task outputs set `derives_from` to the task name
 
-### SelfImprover
+### Agent proposals
 
-Evolution records are tagged `self_improver` with `derives_from="self_improver.evolve"` and embed the shared `ValidationResult`.
+`AgentProposalWorkflow.run` creates a batch parent, validates each candidate, stores accepted children with `parent_key=batch_parent`, and records a run report child.
 
-## Still open (later Phase 2)
+## Still open
 
-- Multi-hop graph export / visualization
-- Explicit validation_status column on every unit
+- Graph visualization / export formats beyond JSON dict
+- Explicit `validation_status` column
 - Downstream consumer registry
-- Stronger trust tiers (experimental vs validated)
