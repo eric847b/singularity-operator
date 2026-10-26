@@ -1,7 +1,7 @@
-"""SingularityOrchestrator v0.5.21 - Currency schema parity with AGA + autonomous loops.
+"""SingularityOrchestrator v0.5.22 - AGA usage/credits visibility + currency parity.
 
-Currency path: fetch_currency_signals → normalize → continuous_roi_rank → currency_next_action.
-AGA feedback merges profile currency_* fields for cross-repo agreement on top_experiment.
+Pulls api_core_remaining / monthly_refill_days from AGA profile into feedback
+and evolution summaries. Free-only free_ai status retained.
 """
 
 from datetime import datetime, timezone
@@ -142,8 +142,7 @@ class SingularityOrchestrator:
             elif task == "aga_feedback":
                 ing = self.gh.ingest_aga_feedback(db=self.db)
                 fb = ing.get("feedback") or {}
-                # Parity: surface AGA-written currency fields when profile has them
-                prof = {}
+                prof: Dict[str, Any] = {}
                 try:
                     pr = self.gh.fetch_aga_profile()
                     prof = (pr.get("profile") or {}) if pr.get("ok") else {}
@@ -156,6 +155,20 @@ class SingularityOrchestrator:
                     fb["currency_version"] = aga_cur.get("version")
                     fb["currency_preferred"] = aga_cur.get("preferred_currency_path")
                     fb["currency_signal"] = aga_cur
+                # Usage / credits from AGA usage_tracker
+                for k in (
+                    "api_core_remaining",
+                    "api_core_limit",
+                    "api_core_hours_to_refill",
+                    "monthly_refill_days",
+                    "monthly_refill_at",
+                    "usage_service_count",
+                    "usage_generated_at",
+                ):
+                    if k in prof:
+                        fb[k] = prof.get(k)
+                if prof.get("usage_ledger"):
+                    fb["usage_ledger_present"] = True
                 self.last_aga = fb
                 results.append({
                     "task": task,
@@ -163,11 +176,12 @@ class SingularityOrchestrator:
                     "roi_top_ref": fb.get("roi_top_ref"),
                     "roi_top_score": fb.get("roi_top_score"),
                     "currency_top_experiment": fb.get("currency_top_experiment"),
+                    "api_core_remaining": fb.get("api_core_remaining"),
+                    "monthly_refill_days": fb.get("monthly_refill_days"),
                 })
                 self.metrics["aga_feedbacks"] += 1
             elif task == "currency_signal":
                 cur = normalize_currency_signal(self.gh.fetch_currency_signals())
-                # Prefer wealth-file signal; if AGA already agrees, note parity
                 aga = self.last_aga or {}
                 aga_exp = aga.get("currency_top_experiment")
                 parity = (
@@ -218,6 +232,8 @@ class SingularityOrchestrator:
                     "top_experiment": top_exp,
                     "top_score": top_score,
                     "aga_currency_parity": cur.get("aga_parity"),
+                    "api_core_remaining": aga.get("api_core_remaining"),
+                    "monthly_refill_days": aga.get("monthly_refill_days"),
                     "action": "rank_recorded",
                     "note": (
                         f"HARD BIAS to currency fleet top experiment '{top_exp}' "
@@ -282,7 +298,12 @@ class SingularityOrchestrator:
                     modality="text",
                     derives_from="free_ai_status",
                 )
-                results.append({"task": task, "available": status.get("available"), "tally": status.get("tally")})
+                results.append({
+                    "task": task,
+                    "available": status.get("available"),
+                    "free_only": status.get("free_only"),
+                    "tally": status.get("tally"),
+                })
             elif task == "fleet_sync":
                 summary = self.evolution_summary()
                 if self.last_currency_action:
@@ -335,8 +356,25 @@ class SingularityOrchestrator:
         act = self.last_currency_action or {}
         aga_bit = ""
         if aga or pick:
-            aga_bit = f"aga_runs={aga.get('runs', '?')} roi={pick.get('roi_top_score') or aga.get('roi_top_score', '?')}:{pick.get('roi_top_ref') or aga.get('roi_top_ref', '')} fleet={aga.get('fleet_last_health', '?')} "
-        fa_bit = f"free_ai_avail={fa.get('available', [])} " if fa else ""
+            aga_bit = (
+                f"aga_runs={aga.get('runs', '?')} "
+                f"roi={pick.get('roi_top_score') or aga.get('roi_top_score', '?')}:"
+                f"{pick.get('roi_top_ref') or aga.get('roi_top_ref', '')} "
+                f"fleet={aga.get('fleet_last_health', '?')} "
+            )
+        usage_bit = ""
+        if aga.get("api_core_remaining") is not None or aga.get("monthly_refill_days") is not None:
+            usage_bit = (
+                f"api_core_rem={aga.get('api_core_remaining', '?')}/"
+                f"{aga.get('api_core_limit', '?')} "
+                f"refill_days={aga.get('monthly_refill_days', '?')} "
+            )
+        fa_bit = ""
+        if fa:
+            fa_bit = (
+                f"free_ai_avail={fa.get('available', [])} "
+                f"free_only={fa.get('free_only', True)} "
+            )
         cur_bit = (
             f"currency={cur.get('version', '?')} prefer={cur.get('preferred_currency_path', False)} "
             f"top_exp={cur.get('top_experiment', '?')} top_score={cur.get('top_score', '?')} "
@@ -349,7 +387,7 @@ class SingularityOrchestrator:
             f"seqs={h.get('sequences', 0)} emb={h.get('embeddings', 0)} llm={self.db.metrics.get('llm_calls', 0)} "
             f"chaos={self.chaos.experiments_run}/{self.chaos.resilience_score:.0f} "
             f"serendipity={self.serendipity.captures}/{self.serendipity.connections_found} "
-            f"{aga_bit}{fa_bit}{cur_bit}{act_bit}"
+            f"{aga_bit}{usage_bit}{fa_bit}{cur_bit}{act_bit}"
             f"roi_ranks={self.metrics.get('roi_ranks', 0)} currency_signals={self.metrics.get('currency_signals', 0)} "
             f"currency_actions={self.metrics.get('currency_actions', 0)} "
             f"agent_proposals={self.metrics.get('agent_proposals', 0)} "
@@ -359,7 +397,7 @@ class SingularityOrchestrator:
 
     def get_status(self) -> Dict[str, Any]:
         return {
-            "version": "0.5.21",
+            "version": "0.5.22",
             "cycles": self.cycle_count,
             "db_health": self.db.get_health_snapshot(),
             "aga_feedback": self.last_aga,
@@ -374,4 +412,4 @@ class SingularityOrchestrator:
         }
 
 
-print("SingularityOrchestrator v0.5.21 - AGA currency schema parity active")
+print("SingularityOrchestrator v0.5.22 - AGA usage/credits in evolution summary")
