@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Free AI Client — zero-cost multi-provider rotator for continuous development.
 
-Local-first (Ollama) → Pollinations no-key → free cloud tiers (Groq, OpenRouter, Gemini, …).
-Seamless failover so continuous refinement never pauses on rate limits or missing keys.
-Autonomous contract: no human required; never invent payment or completed sales.
+Default: FREE ONLY. Paid APIs are not used unless FREE_AI_ALLOW_PAID=1 and a
+self-funded path exists (owner has zero income → keep allow_paid off).
+
+Local-first (Ollama) → Pollinations no-key → free-tier keys only when present.
+Autonomous: no human required; never invent payment or completed sales.
 """
 
 from __future__ import annotations
@@ -19,13 +21,21 @@ import requests
 
 _AUTONOMOUS_SYSTEM = (
     "You are a high-leverage autonomous continuous development agent. "
-    "Produce maximum functional progress with free resources. "
-    "No human operator is available. Never invent payment, revenue, or completed sales."
+    "Produce maximum functional progress with free resources only. "
+    "No human operator is available. Never invent payment, revenue, or completed sales. "
+    "Do not suggest paid APIs or paid SaaS as dependencies."
 )
 
 
 def _env(key: str, default: str = "") -> str:
     return (os.getenv(key) or default).strip()
+
+
+def _free_only() -> bool:
+    """Default True. Paid lanes require explicit FREE_AI_ALLOW_PAID=1."""
+    if _env("FREE_AI_ALLOW_PAID", "0") == "1":
+        return False
+    return _env("FREE_ONLY", "1") != "0"
 
 
 def _package_version() -> str:
@@ -37,7 +47,7 @@ def _package_version() -> str:
 
 
 class FreeAIClient:
-    """Rotating free AI client. Prefer permanent-free local, then no-key cloud, then free-tier keys."""
+    """Rotating free AI client. Never spends money under default policy."""
 
     def __init__(self, timeout: int = 30):
         self.timeout = timeout
@@ -46,9 +56,11 @@ class FreeAIClient:
         self.cooldown_s = float(_env("FREE_AI_COOLDOWN_S", "60") or "60")
         self.last_provider: Optional[str] = None
         self.last_error: Optional[str] = None
+        self.free_only = _free_only()
 
     def _providers(self) -> List[Dict[str, Any]]:
-        """Ordered free pool. Local permanent-free first."""
+        """Ordered pool. All entries are free-tier or local; no paid-only models."""
+        # Note: even with keys, we only list free-tier model IDs.
         return [
             {
                 "name": "ollama",
@@ -56,6 +68,7 @@ class FreeAIClient:
                 "model": _env("OLLAMA_MODEL", "phi3:mini"),
                 "headers": lambda: {"Content-Type": "application/json"},
                 "key_required": False,
+                "cost_class": "free_local",
             },
             {
                 "name": "pollinations",
@@ -63,6 +76,7 @@ class FreeAIClient:
                 "model": _env("POLLINATIONS_MODEL", "openai"),
                 "headers": lambda: {"Content-Type": "application/json"},
                 "key_required": False,
+                "cost_class": "free_nokey",
             },
             {
                 "name": "groq",
@@ -74,10 +88,12 @@ class FreeAIClient:
                 },
                 "key_required": True,
                 "key_env": "GROQ_API_KEY",
+                "cost_class": "free_tier_key",
             },
             {
                 "name": "openrouter",
                 "url": "https://openrouter.ai/api/v1/chat/completions",
+                # Explicit free model slug — never a paid model id by default
                 "model": _env("OPENROUTER_MODEL", "meta-llama/llama-3-8b:free"),
                 "headers": lambda: {
                     "Authorization": f"Bearer {_env('OPENROUTER_API_KEY')}",
@@ -87,6 +103,7 @@ class FreeAIClient:
                 },
                 "key_required": True,
                 "key_env": "OPENROUTER_API_KEY",
+                "cost_class": "free_tier_key",
             },
             {
                 "name": "gemini",
@@ -98,17 +115,7 @@ class FreeAIClient:
                 },
                 "key_required": True,
                 "key_env": "GEMINI_API_KEY",
-            },
-            {
-                "name": "together",
-                "url": "https://api.together.xyz/v1/chat/completions",
-                "model": _env("TOGETHER_MODEL", "meta-llama/Meta-Llama-3.1-8b-instruct-turbo"),
-                "headers": lambda: {
-                    "Authorization": f"Bearer {_env('TOGETHER_API_KEY')}",
-                    "Content-Type": "application/json",
-                },
-                "key_required": True,
-                "key_env": "TOGETHER_API_KEY",
+                "cost_class": "free_tier_key",
             },
         ]
 
@@ -117,16 +124,25 @@ class FreeAIClient:
             return False
         if p.get("key_required") and not _env(p.get("key_env", "")):
             return False
+        # Under free_only, skip anything not marked free_*
+        if self.free_only and not str(p.get("cost_class", "")).startswith("free"):
+            return False
+        # Refuse openrouter models that are not clearly free when free_only
+        if self.free_only and p["name"] == "openrouter":
+            model = str(p.get("model") or "")
+            if ":free" not in model and "free" not in model.lower():
+                return False
         return True
 
     def get_status(self) -> Dict[str, Any]:
-        """Live status for ROI ranking, Orchestrator, and fleet health."""
         providers = self._providers()
         available = [p["name"] for p in providers if self._available(p)]
         cooled = [name for name, until in self.cooldowns.items() if time.time() < until]
         return {
             "version": _package_version(),
             "mode": "autonomous",
+            "free_only": self.free_only,
+            "allow_paid": not self.free_only,
             "available": available,
             "cooled_down": cooled,
             "tally": dict(self.tally),
@@ -134,11 +150,11 @@ class FreeAIClient:
             "last_error": self.last_error,
             "local_first": True,
             "pollinations_no_key": True,
+            "policy": "paid only if self-funded; default free-only",
             "keys_present": {
                 "GROQ_API_KEY": bool(_env("GROQ_API_KEY")),
                 "OPENROUTER_API_KEY": bool(_env("OPENROUTER_API_KEY")),
                 "GEMINI_API_KEY": bool(_env("GEMINI_API_KEY")),
-                "TOGETHER_API_KEY": bool(_env("TOGETHER_API_KEY")),
             },
         }
 
@@ -149,13 +165,12 @@ class FreeAIClient:
         max_tokens: int = 1024,
         temperature: float = 0.7,
     ) -> Dict[str, Any]:
-        """Call free AI with seamless rotation. Returns structured result."""
         messages = [
             {"role": "system", "content": system},
             {"role": "user", "content": prompt},
         ]
         providers = self._providers()
-        last_err = "no providers available"
+        last_err = "no free providers available"
 
         for _ in range(len(providers) * 2):
             for p in providers:
@@ -192,6 +207,7 @@ class FreeAIClient:
                                 "provider": p["name"],
                                 "response": content.strip(),
                                 "cost": 0.0,
+                                "cost_class": p.get("cost_class"),
                                 "tally": dict(self.tally),
                                 "raw": data,
                             }
@@ -213,6 +229,8 @@ class FreeAIClient:
             "tally": dict(self.tally),
             "providers_tried": [p["name"] for p in providers],
             "mode": "autonomous",
+            "free_only": self.free_only,
+            "cost": 0.0,
         }
 
 
@@ -227,11 +245,10 @@ def get_free_ai() -> FreeAIClient:
 
 
 def call_free_ai(prompt: str, **kwargs) -> Dict[str, Any]:
-    """Drop-in free AI call for continuous development loops."""
     return get_free_ai().complete(prompt, **kwargs)
 
 
 if __name__ == "__main__":
-    r = call_free_ai("State in one line the highest-return free AI action for continuous software development.")
+    r = call_free_ai("One line: highest-return free-only action for continuous software development.")
     print(json.dumps(r, indent=2))
     print("STATUS:", json.dumps(get_free_ai().get_status(), indent=2))
