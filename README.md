@@ -2,6 +2,22 @@
 
 **Self-improving AI system** with EverythingDB, fleet orchestration, AGA metrics feedback, **deep currency experiment ranking**, and continuous upgrade from live ROI ranking — powered by a zero-cost free AI rotator.
 
+## Overview
+
+Singularity Operator is an experimental autonomous knowledge, validation, and orchestration platform.
+
+The project focuses on:
+
+- Memory systems
+- Agent collaboration
+- Knowledge validation
+- Architecture evolution
+- Cross-system orchestration
+
+The goal is practical autonomous system development through iterative evolution rather than speculative end-state intelligence claims.
+
+See [ROADMAP.md](ROADMAP.md) and [docs/](docs/) for the phased plan, architecture, and documentation policy.
+
 ## Free AI Capacity
 
 Continuous development loops use `singularity_operator/free_ai_client.py`:
