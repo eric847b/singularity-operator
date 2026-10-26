@@ -15,7 +15,7 @@ concurrency:
 jobs:
   evolve:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -27,12 +27,29 @@ jobs:
           pip install -e .
           pip install requests
           pip install groq || echo "groq optional"
-      - name: Run bounded evolution cycle
+      - name: Run full autonomous orchestrator cycle
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_FULL_PAT: ${{ secrets.GH_FULL_PAT }}
-        run: python singularity_operator.py
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from singularity_operator.orchestrator import SingularityOrchestrator
+
+          # Full cycle: improve, propose, currency signal, ROI rank, next-action, fleet sync, report
+          # No human steps. Draft-only on currency; never fabricates payment.
+          orch = SingularityOrchestrator()
+          results = orch.run_orchestrated_cycle()
+          status = orch.get_status()
+          print("[auto-evolve] tasks:", len(results))
+          print("[auto-evolve] summary:", orch.evolution_summary())
+          action = status.get("currency_action") or {}
+          if action:
+              print("[auto-evolve] currency_next:", action.get("experiment_id"), action.get("title"))
+          print("[auto-evolve] metrics:", json.dumps(status.get("metrics") or {}, indent=0)[:800])
+          PY
       - name: Publish evolution report
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -42,8 +59,15 @@ jobs:
           import os
           from singularity_operator.github_seamless import GitHubSeamless
           from singularity_operator.orchestrator import SingularityOrchestrator
-          orch=SingularityOrchestrator()
-          summary=orch.evolution_summary()
-          extra={"source":"auto-evolve.yml","run_id":os.getenv("GITHUB_RUN_ID")}
-          print("[auto-evolve] evolution report:",GitHubSeamless().publish_evolution_report(summary,extra=extra))
+          orch = SingularityOrchestrator()
+          # Lightweight status refresh for report body (cycle already ran above in same job
+          # only if previous step shared state — re-summary from fresh instance is ok)
+          summary = orch.evolution_summary()
+          extra = {
+              "source": "auto-evolve.yml",
+              "mode": "autonomous",
+              "run_id": os.getenv("GITHUB_RUN_ID"),
+              "note": "Zero human-touch cycle. Currency actions are recorded not forced.",
+          }
+          print("[auto-evolve] evolution report:", GitHubSeamless().publish_evolution_report(summary, extra=extra))
           PY

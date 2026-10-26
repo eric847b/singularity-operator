@@ -1,7 +1,8 @@
-"""Currency experiment next-action planner.
+"""Currency experiment next-action planner (autonomous-safe).
 
-Turns top_experiment / top_score from the wealth fleet signal into a concrete,
-provenance-linked next action. Draft-only: never marks won without real payment.
+Turns top_experiment / top_score into a recorded next action with provenance.
+Autonomous mode: records and publishes; does not require human outreach to run.
+Never marks won without real payment — payment cannot be fabricated by the loop.
 """
 
 from __future__ import annotations
@@ -14,41 +15,40 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-# Concrete next steps keyed by experiment id from CURRENCY_STATUS / income_experiments
 EXPERIMENT_PLAYBOOK: Dict[str, Dict[str, Any]] = {
     "setup-session-offer": {
-        "title": "Book or deliver one real setup session",
+        "title": "Keep setup-session surface current; convert only on real inbound/payment",
         "expected_revenue": 149,
         "effort": 3,
         "steps": [
-            "Open templates/setup_session_offer.md and confirm CTA + price still accurate",
-            "Share offer link or SOW with one real prospect (not simulated)",
-            "On paid delivery only: log income in tracker.py ledger; mark experiment won",
-            "Update runway via runway.py after ledger write",
+            "Autonomous: ensure offer/SOW/checklist templates remain accurate in wealth repo",
+            "Autonomous: publish currency_next_action + fleet signal for hub/agents",
+            "Non-blocking optional: human capacity may book/deliver; not required for loop health",
+            "Only after real payment: ledger write; never simulate income",
         ],
         "repo": "eric847b/zero-cost-wealth-playbook-tool",
         "artifacts": ["templates/setup_session_offer.md", "scripts/quote.py", "tracker.py"],
     },
     "oss-inbound-help": {
-        "title": "Convert one GitHub issue/reply into a paid help offer",
+        "title": "Keep scoped OSS help offer ready for inbound threads",
         "expected_revenue": 99,
         "effort": 2,
         "steps": [
-            "Pick one open inbound issue or reply in fleet/public repos",
-            "Reply with scoped paid help offer ($99) + clear deliverable",
-            "On acceptance + payment: log ledger; only then mark won",
+            "Autonomous: maintain templates/oss_inbound_help_offer.md accuracy",
+            "Autonomous: surface experiment in ROI/fleet reports",
+            "Convert only on real request + payment",
         ],
         "repo": "eric847b/zero-cost-wealth-playbook-tool",
-        "artifacts": ["scripts/quote.py", "tracker.py"],
+        "artifacts": ["templates/oss_inbound_help_offer.md", "scripts/quote.py"],
     },
     "template-pack-listing": {
-        "title": "Publish template pack listing and sell one pack",
+        "title": "Keep client pack + PUBLIC_LISTING release-ready",
         "expected_revenue": 79,
         "effort": 2,
         "steps": [
-            "Paste PUBLIC_LISTING.md blurb to Gumroad/Lemon free-tier product",
-            "Attach pack ZIP from scripts/pack_client.py output",
-            "On first sale: log ledger; mark won only after payment confirmed",
+            "Autonomous: pack_client.py and PUBLIC_LISTING.md stay valid",
+            "Autonomous: release workflow can attach zip on tag",
+            "Marketplace paste is optional human capacity — not a loop dependency",
         ],
         "repo": "eric847b/zero-cost-wealth-playbook-tool",
         "artifacts": ["PUBLIC_LISTING.md", "scripts/pack_client.py"],
@@ -78,6 +78,7 @@ def plan_next_action(
     action = {
         "at": _utc_now(),
         "kind": "currency_next_action",
+        "mode": "autonomous",
         "experiment_id": exp_id,
         "top_score": score,
         "title": play["title"],
@@ -94,12 +95,14 @@ def plan_next_action(
             "no_force_merge": True,
             "never_mark_won_without_payment": True,
             "zero_paid_apis": True,
+            "no_human_required": True,
+            "no_simulated_income": True,
         },
         "hub_handoff": {
             "canonical_entry": "eric847b/AI-Collaboration-Hub",
-            "note": "Surface this action in hub fleet status; singularity-operator remains specialized subsystem",
+            "note": "Autonomous fleet signal; singularity-operator is specialized subsystem",
         },
-        "status": "ready",
+        "status": "recorded",
     }
     return action
 
@@ -107,7 +110,7 @@ def plan_next_action(
 def action_summary_line(action: Dict[str, Any]) -> str:
     return (
         f"next_action={action.get('experiment_id')} "
-        f"title={action.get('title', '')[:60]} "
-        f"score={action.get('top_score')} "
-        f"rev={action.get('expected_revenue')}"
+        f"mode={action.get('mode', 'autonomous')} "
+        f"title={action.get('title', '')[:50]} "
+        f"score={action.get('top_score')}"
     )
