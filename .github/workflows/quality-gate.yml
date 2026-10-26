@@ -26,24 +26,41 @@ jobs:
         run: python -m pip install -e '.[test]'
       - name: Compile all Python
         run: python -m compileall -q .
-      - name: Verify evolution safety invariants
+      - name: Verify evolution safety and provenance invariants
         run: |
           python - <<'PY'
           from pathlib import Path
           import ast
-          p=Path('singularity_operator/self_improver.py')
-          t=p.read_text()
+
+          # SelfImprover must use shared validation
+          p = Path('singularity_operator/self_improver.py')
+          t = p.read_text()
           ast.parse(t)
-          assert 'ast.parse(candidate)' in t
-          # No-change rejection is AST-based (whitespace-insensitive tree comparison),
-          # not a string strip comparison — check the property, not the literal form
-          assert 'ast.dump(original_tree' in t
-          assert 'ast.dump(candidate_tree' in t
-          o=Path('singularity_operator/orchestrator.py').read_text()
+          assert 'from .validation import validate_python_evolution' in t
+          assert 'validate_python_evolution(' in t
+
+          # validation module must expose core helpers
+          v = Path('singularity_operator/validation.py').read_text()
+          ast.parse(v)
+          assert 'def validate_python_evolution' in v
+          assert 'def ast_equivalent' in v
+
+          # EverythingDB provenance columns + APIs
+          e = Path('singularity_operator/everything_db.py').read_text()
+          ast.parse(e)
+          assert 'parent_key' in e
+          assert 'derives_from' in e
+          assert 'def get_children' in e
+          assert 'def get_sequence' in e
+
+          # Orchestrator improvement accounting + currency parent link
+          o = Path('singularity_operator/orchestrator.py').read_text()
           ast.parse(o)
           assert 'actual = self.improver.improvements_made - before' in o
           assert 'self.metrics["improvements"] += actual' in o
-          print('Evolution safety invariants verified')
+          assert 'parent_key=self.last_currency_key' in o
+
+          print('Evolution safety + provenance invariants verified')
           PY
       - name: Run tests when present
         shell: bash

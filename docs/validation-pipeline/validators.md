@@ -1,29 +1,33 @@
 # Validators
 
-There is no separate validator package yet. Validation is embedded in the evolution and orchestration paths.
+## Shared module: `singularity_operator/validation.py`
 
-## SelfImprover validation
+| Helper | Role |
+|--------|------|
+| `validate_python_evolution(original, candidate)` | Accept/reject evolved Python (non-empty, parses, optional AST change) |
+| `ast_equivalent(a, b)` | Whitespace-insensitive AST equality |
+| `is_valid_python(source)` | Syntax check |
+| `validate_sequence_payload(value)` | Lightweight type gate for knowledge units |
+| `ValidationResult` | Structured ok/reason/detail |
 
-`SelfImprover.evolve()`:
+## SelfImprover
 
-1. Calls free-AI rotator (`call_ai`)
-2. Parses candidate with `ast.parse`
-3. Rejects if AST dump is identical to original (no meaningful change)
-4. On any parse / exception → keep original, increment failures, log reason
-5. On accept → increment improvements, write sequence to EverythingDB under tag `self_improver`
+Uses `validate_python_evolution` exclusively for accept/reject. On failure keeps original and logs reason (`empty`, `no_change`, `syntax_error`). On success writes sequence with validation payload.
 
-This is structural + change-detection validation, not semantic proof.
+## Orchestrator
 
-## Orchestrator validation patterns
+Does not force semantic validation on free-AI text; relies on draft-only ROI notes and structured storage with provenance links.
 
-- Currency / ROI picks are stored as sequences with explicit tags; ranking is "draft-only; no force-merge"
-- Browser smoke + userscript self-evo tests write pass/fail style results into the DB
-- Chaos battery records resilience experiments
-- Evolution reports publish summaries via GitHubSeamless (status recorded)
+## Quality gate
 
-## Intended Phase 2 expansion
+`.github/workflows/quality-gate.yml` asserts:
 
-- Schema / structural validators for knowledge units
-- Consistency checks against existing sequences
-- Optional free-AI review step with explicit policy gates
-- Clear pass/fail artifacts consumable by CI and the Orchestrator
+- SelfImprover imports and calls shared validation
+- validation.py defines core helpers
+- EverythingDB exposes parent_key / derives_from / get_sequence / get_children
+- Orchestrator links ROI rank to currency parent key
+
+## Next
+
+- Optional free-AI review step with policy gates
+- CI-consumable pass/fail artifacts for agent proposals
