@@ -1,11 +1,8 @@
-"""SingularityOrchestrator v0.5.20 - Continuous ROI + free AI + deep currency experiment ranking + provenance + agent proposals.
+"""SingularityOrchestrator v0.5.20 - Continuous ROI + currency next-action + hub-first fleet + agent proposals.
 
-Uses AGA-fed roi_top_ref after aga_feedback; records ranked target into EverythingDB.
-Currency path: fetch_currency_signals (CURRENCY_STATUS.md JSON + top_experiment/top_score)
-hard-biased inside continuous_roi_rank toward highest expected $/effort open experiment.
-ROI rank sequences parent-link to currency signal sequences when available.
-agent_propose runs propose → validate → store with lineage.
-Free AI rotator powers continuous refinement.
+Currency path: fetch_currency_signals → continuous_roi_rank → currency_next_action
+(concrete steps for top_experiment with provenance).
+Fleet sync prioritizes AI-Collaboration-Hub as canonical entry.
 """
 
 from datetime import datetime, timezone
@@ -20,6 +17,7 @@ from .browser_automation import BrowserAutomation
 from .userscript_gen import UserscriptGenerator
 from .free_ai_client import get_free_ai
 from .agent_proposals import AgentProposalWorkflow
+from .currency_action import plan_next_action, action_summary_line
 
 
 def _utc_now() -> str:
@@ -51,14 +49,17 @@ class SingularityOrchestrator:
             "roi_ranks": 0,
             "currency_signals": 0,
             "agent_proposals": 0,
+            "currency_actions": 0,
         }
         self.last_summary: str = ""
         self.last_aga: Optional[Dict[str, Any]] = None
         self.last_roi_pick: Optional[Dict[str, Any]] = None
+        self.last_roi_key: Optional[str] = None
         self.last_free_ai_status: Optional[Dict[str, Any]] = None
         self.last_currency: Optional[Dict[str, Any]] = None
         self.last_currency_key: Optional[str] = None
         self.last_proposal_report: Optional[Dict[str, Any]] = None
+        self.last_currency_action: Optional[Dict[str, Any]] = None
 
     def run_orchestrated_cycle(self, tasks: List[str] = None) -> List[Dict[str, Any]]:
         if tasks is None:
@@ -73,6 +74,7 @@ class SingularityOrchestrator:
                 "aga_feedback",
                 "currency_signal",
                 "continuous_roi_rank",
+                "currency_next_action",
                 "free_ai_status",
                 "fleet_sync",
                 "publish_evolution_report",
@@ -201,6 +203,7 @@ class SingularityOrchestrator:
                     derives_from="continuous_roi_rank",
                 )
                 self.last_roi_pick = pick
+                self.last_roi_key = key
                 results.append({
                     "task": task,
                     "roi_top_ref": pick.get("roi_top_ref"),
@@ -212,6 +215,31 @@ class SingularityOrchestrator:
                     "parent_key": self.last_currency_key,
                 })
                 self.metrics["roi_ranks"] += 1
+            elif task == "currency_next_action":
+                action = plan_next_action(
+                    currency_signal=self.last_currency,
+                    roi_pick=self.last_roi_pick,
+                )
+                parent = self.last_roi_key or self.last_currency_key
+                key = self.db.add_sequence(
+                    action,
+                    tags="currency:next_action",
+                    modality="text",
+                    parent_key=parent,
+                    derives_from="currency_next_action",
+                )
+                self.last_currency_action = action
+                results.append({
+                    "task": task,
+                    "experiment_id": action.get("experiment_id"),
+                    "title": action.get("title"),
+                    "expected_revenue": action.get("expected_revenue"),
+                    "steps": len(action.get("steps") or []),
+                    "stored_key": key,
+                    "parent_key": parent,
+                    "summary": action_summary_line(action),
+                })
+                self.metrics["currency_actions"] += 1
             elif task == "free_ai_status":
                 status = get_free_ai().get_status()
                 self.last_free_ai_status = status
@@ -224,23 +252,29 @@ class SingularityOrchestrator:
                 results.append({"task": task, "available": status.get("available"), "tally": status.get("tally")})
             elif task == "fleet_sync":
                 summary = self.evolution_summary()
+                if self.last_currency_action:
+                    summary = summary + " | " + action_summary_line(self.last_currency_action)
+                # Hub first as canonical platform entry, then specialized subsystems
                 sync = self.gh.sync_status(
                     summary,
                     target_repos=[
-                        "eric847b/autonomous-github-agent",
                         "eric847b/AI-Collaboration-Hub",
+                        "eric847b/autonomous-github-agent",
                         "eric847b/zero-cost-wealth-playbook-tool",
                     ],
                 )
-                results.append({"task": task, "sync": sync.get("status")})
+                results.append({"task": task, "sync": sync.get("status"), "hub_first": True})
                 self.metrics["fleet_syncs"] += 1
             elif task == "publish_evolution_report":
                 summary = self.evolution_summary()
+                if self.last_currency_action:
+                    summary = summary + " | " + action_summary_line(self.last_currency_action)
                 extra = {
                     "orchestrator_metrics": self.metrics.copy(),
                     "aga_feedback": self.last_aga,
                     "roi_pick": self.last_roi_pick,
                     "currency": self.last_currency,
+                    "currency_action": self.last_currency_action,
                     "free_ai": self.last_free_ai_status,
                     "proposal_report": self.last_proposal_report,
                     "gh": self.gh.get_metrics(),
@@ -266,6 +300,7 @@ class SingularityOrchestrator:
         pick = self.last_roi_pick or {}
         fa = self.last_free_ai_status or {}
         cur = self.last_currency or {}
+        act = self.last_currency_action or {}
         aga_bit = ""
         if aga or pick:
             aga_bit = f"aga_runs={aga.get('runs', '?')} roi={pick.get('roi_top_score') or aga.get('roi_top_score', '?')}:{pick.get('roi_top_ref') or aga.get('roi_top_ref', '')} fleet={aga.get('fleet_last_health', '?')} "
@@ -275,13 +310,15 @@ class SingularityOrchestrator:
             f"top_exp={cur.get('top_experiment', '?')} top_score={cur.get('top_score', '?')} "
             if cur else ""
         )
+        act_bit = f"next={act.get('experiment_id', '?')} " if act else ""
         return (
             f"[{_utc_now()}] cycle={self.cycle_count} improvements={self.improver.improvements_made} "
             f"seqs={h.get('sequences', 0)} emb={h.get('embeddings', 0)} llm={self.db.metrics.get('llm_calls', 0)} "
             f"chaos={self.chaos.experiments_run}/{self.chaos.resilience_score:.0f} "
             f"serendipity={self.serendipity.captures}/{self.serendipity.connections_found} "
-            f"{aga_bit}{fa_bit}{cur_bit}"
+            f"{aga_bit}{fa_bit}{cur_bit}{act_bit}"
             f"roi_ranks={self.metrics.get('roi_ranks', 0)} currency_signals={self.metrics.get('currency_signals', 0)} "
+            f"currency_actions={self.metrics.get('currency_actions', 0)} "
             f"agent_proposals={self.metrics.get('agent_proposals', 0)} "
             f"aga_ingests={self.gh.metrics.get('aga_ingests', 0)} fleet_syncs={self.metrics.get('fleet_syncs', 0)} | "
             f"{self.improver.learning_summary_line()} | {self.chaos.summary_line()} | {self.serendipity.summary_line()}"
@@ -295,6 +332,7 @@ class SingularityOrchestrator:
             "aga_feedback": self.last_aga,
             "roi_pick": self.last_roi_pick,
             "currency": self.last_currency,
+            "currency_action": self.last_currency_action,
             "free_ai_status": self.last_free_ai_status,
             "proposal_report": self.last_proposal_report,
             "metrics": self.metrics,
@@ -303,4 +341,4 @@ class SingularityOrchestrator:
         }
 
 
-print("SingularityOrchestrator v0.5.20 - Continuous ROI + agent proposals + provenance active")
+print("SingularityOrchestrator v0.5.20 - Currency next-action + hub-first fleet active")

@@ -8,81 +8,38 @@ Build an autonomous knowledge, validation, and orchestration platform capable of
 
 ## Phase 1 — Foundation Stability
 
-Priority: Critical
-
-Objectives:
-
-- Standardize architecture patterns
-- Establish test coverage requirements
-- Define module contracts
-- Create dependency inventory
-- Define repository governance
-
-Success Criteria:
-
-- Architecture documented ✅
-- CI consistently green (ongoing; quality-gate expanded)
-- Module boundaries defined ✅
-- Dependency graph generated ✅
+Priority: Critical — largely complete (architecture, contracts, inventory, quality-gate).
 
 ---
 
 ## Phase 2 — Knowledge Engine
 
-Priority: High
-
-Objectives:
-
-- Structured memory subsystem
-- Provenance tracking
-- Validation pipeline
-- Knowledge indexing
-
-Success Criteria:
-
-- Memory model documented ✅
-- Validation rules operational ✅
-- Knowledge dependencies traceable ✅ (parent links + multi-hop `export_lineage`)
+Priority: High — complete baseline (memory model, validation, parent + multi-hop provenance).
 
 ---
 
 ## Phase 3 — Autonomous Evolution
 
-Priority: High
-
-Objectives:
-
-- Proposal generation
-- Architecture review agents
-- Automated refactoring recommendations
-- Evolution scoring
-
-Success Criteria:
-
-- Agent-generated proposals ✅ baseline (`AgentProposalWorkflow` + Orchestrator `agent_propose`)
-- Safe review workflow ✅ (validate then store; draft-only ROI)
-- Evolution metrics dashboard (partial via evolution_summary / reports)
-
-Next: richer review agents, scoring dashboard, automated refactor suggestions gated by validation.
+Priority: High — baseline complete (AgentProposalWorkflow, safe validate→store, evolution metrics in summary/reports).
 
 ---
 
 ## Phase 4 — Ecosystem Integration
 
-Priority: Medium
+Priority: Medium → active
 
 Objectives:
 
-- AI-Collaboration-Hub integration
-- Third Door integration
-- Nexus integration
-- Shared telemetry
+- AI-Collaboration-Hub integration ✅ hub-first fleet_sync + hub_handoff on currency actions
+- Currency experiment delivery loop ✅ `currency_next_action` maps top_experiment → concrete steps with provenance
+- Third Door / Nexus deeper interfaces (next)
+- Shared telemetry / event bus (next)
 
 Success Criteria:
 
-- Unified event bus
-- Shared memory interfaces
-- Cross-project observability
+- Unified event bus (pending)
+- Shared memory interfaces (pending)
+- Cross-project observability (partial via fleet status + evolution reports)
 
 ---
 
@@ -93,5 +50,5 @@ Success Criteria:
 3. Memory subsystem ✅
 4. Validation layer ✅
 5. Agent autonomy ✅ baseline
-6. Ecosystem integration
-7. New feature expansion
+6. Ecosystem integration ✅ hub-first + currency next-action
+7. Real currency delivery (human: book/deliver setup session; system tracks via ledger)
