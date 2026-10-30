@@ -1,6 +1,6 @@
-# Singularity Operator v0.5.20
+# Singularity Operator v0.5.22
 
-**Self-improving AI system** with EverythingDB, fleet orchestration, AGA metrics feedback, **deep currency experiment ranking**, and continuous upgrade from live ROI ranking — powered by a zero-cost free AI rotator.
+**Self-improving AI system** with EverythingDB, fleet orchestration, AGA metrics feedback, **deep currency experiment ranking**, AGA usage/credits visibility, and continuous upgrade from live ROI ranking — powered by a zero-cost free AI rotator.
 
 ## Overview
 
@@ -48,13 +48,17 @@ Download the latest **Release** from the [Releases page](https://github.com/eric
 
 The release workflow checks that `VERSION`, `pyproject.toml`, `singularity_operator/__init__.py`, the README heading, and the pushed tag all agree. Required builds fail closed; optional executable builds are not silently ignored.
 
-After the v0.5.20 changes are merged, publish the matching tag:
+After the v0.5.22 changes are merged, publish the matching tag:
 
 ```bash
 git pull --ff-only origin main
-git tag v0.5.20
-git push origin v0.5.20
+git tag v0.5.22
+git push origin v0.5.22
 ```
+
+## What's New in v0.5.22
+- AGA usage/credits visibility + currency parity in orchestrator telemetry and evolution summaries.
+- Full version surface parity (VERSION / pyproject / __init__ / README / orchestrator).
 
 ## What's New in v0.5.20
 - Hardened release integrity checks across package metadata, runtime version, README, and Git tag.
@@ -85,4 +89,4 @@ Requires `GITHUB_TOKEN` / `GH_FULL_PAT` for live AGA ingest, currency signals, a
 ## Architecture
 EverythingDB · SelfImprover (free-AI primary) · Chaos · Serendipity · Browser · Userscript · GitHubSeamless (AGA + **currency + top experiment**) · Orchestrator (continuous_roi_rank + currency_signal) · FreeAIClient
 
-*Status: v0.5.20 release integrity checks prepared; publish only after CI passes.*
+*Status: v0.5.22 version parity complete; publish tag after CI passes.*
