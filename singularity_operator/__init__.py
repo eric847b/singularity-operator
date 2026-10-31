@@ -1,7 +1,7 @@
 """Singularity Operator v0.5.22 - Ultimate self-improving AI system.
 
 v0.5.22: AGA usage/credits visibility + currency parity in orchestrator telemetry.
-         MERGE_POLICY + IncompletePath recovery (partial multi-file safe).
+         MERGE_POLICY + IncompletePath + MaintenanceCrew (seamless soft-fail heal).
 v0.5.20: Release integrity; shared validation; multi-hop provenance; AgentProposalWorkflow;
          currency_next_action (top_experiment → concrete steps); hub-first fleet_sync.
 v0.5.19: Deep currency experiment ranking (#43).
@@ -30,6 +30,7 @@ from .validation import (
 from .agent_proposals import AgentProposalWorkflow, run_proposal_cycle
 from .currency_action import plan_next_action, action_summary_line
 from .incomplete_path import IncompletePath, IncompletePathRegistry
+from .maintenance_crew import MaintenanceCrew, SoftEvent
 
 __version__ = "0.5.22"
 __all__ = [
@@ -56,4 +57,6 @@ __all__ = [
     "action_summary_line",
     "IncompletePath",
     "IncompletePathRegistry",
+    "MaintenanceCrew",
+    "SoftEvent",
 ]
