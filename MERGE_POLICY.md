@@ -30,7 +30,20 @@ Use `singularity_operator.incomplete_path`:
 3. If incomplete → **safe default**, remember inputs, mark `paused_for_update`.
 4. When the missing piece appears → **resume** with remembered inputs (live update on the fly).
 
-This is the code-level expression of “dead end with a route to bypass the missing parts.”
+## MaintenanceCrew — seamless user channel (autonomous GitHub agent / any AI)
+
+Use `singularity_operator.maintenance_crew.MaintenanceCrew`:
+
+| Situation | User sees | System does |
+|-----------|-----------|-------------|
+| Code exception | Continuation (as if nothing failed) | Soft-fail, remember inputs, optional free-AI propose-fix |
+| Missing multi-piece / sensor order | Continuation | IncompletePath + reorder/wait; heal_tick when ready |
+| Personal / custom / unknown input not ready | Continuation | `defer_input` — store; apply later without restart |
+| Fix lands live | Same session | Remerge channels via resume; no process restart |
+
+Optional `expose_pause_reason=True` if the user should see a short soft-pause reason. Default is silent seamless continuation.
+
+Docs: `docs/MAINTENANCE_CREW.md`.
 
 ## PR / agent checklist
 
@@ -38,10 +51,11 @@ This is the code-level expression of “dead end with a route to bypass the miss
 - [ ] No force-merge / force-push
 - [ ] Incomplete code is inert (flag, stub, or optional import)
 - [ ] Multi-file features register an `IncompletePath` (or equivalent) when partial merge is possible
+- [ ] Runtime soft-fail uses MaintenanceCrew (or equivalent) so the user channel does not surface failure
 - [ ] Main remains shippable after merge
 
 ## VS Code
 
 See AI-Collaboration-Hub `.vscode/settings.json` — policy reminder and GitHub PR extension recommended so incomplete work is visible before merge.
 
-Related: `AUTONOMOUS.md`, `CONTINUOUS_CONTEXT.md`
+Related: `AUTONOMOUS.md`, `CONTINUOUS_CONTEXT.md`, `docs/MAINTENANCE_CREW.md`
