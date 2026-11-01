@@ -1,5 +1,6 @@
-"""Singularity Operator v0.5.22 - Ultimate self-improving AI system.
+"""Singularity Operator v0.5.23 - Ultimate self-improving AI system.
 
+v0.5.23: Currency action signal freshness + live confirmation provenance for #43.
 v0.5.22: AGA usage/credits visibility + currency parity in orchestrator telemetry.
          MERGE_POLICY + IncompletePath + MaintenanceCrew + DynamicsCore
          (hard-fail resume, order variants, dynamics cache, resource morph).
@@ -43,7 +44,7 @@ from .dynamics_core import (
     STATE_INACTIVE,
 )
 
-__version__ = "0.5.22"
+__version__ = "0.5.23"
 __all__ = [
     "EverythingDB",
     "SelfImprover",

@@ -75,6 +75,10 @@ def plan_next_action(
     if exp_id not in EXPERIMENT_PLAYBOOK:
         exp_id = DEFAULT_EXPERIMENT
 
+    # v0.5.23: signal freshness for live confirmation
+    signal_at = cur.get("updated") or cur.get("at") or _utc_now()
+    freshness_note = "live_signal_confirmed" if cur.get("ok") or cur.get("preferred_currency_path") else "fallback"
+
     action = {
         "at": _utc_now(),
         "kind": "currency_next_action",
@@ -90,6 +94,8 @@ def plan_next_action(
         "currency_version": cur.get("version"),
         "preferred_currency_path": bool(cur.get("preferred_currency_path", True)),
         "roi_top_ref": roi.get("roi_top_ref"),
+        "signal_freshness": freshness_note,
+        "signal_at": signal_at,
         "policy": {
             "draft_only": True,
             "no_force_merge": True,
@@ -112,5 +118,6 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"next_action={action.get('experiment_id')} "
         f"mode={action.get('mode', 'autonomous')} "
         f"title={action.get('title', '')[:50]} "
-        f"score={action.get('top_score')}"
+        f"score={action.get('top_score')} "
+        f"fresh={action.get('signal_freshness', '?')}"
     )
