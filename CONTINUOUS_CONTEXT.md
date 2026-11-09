@@ -14,7 +14,7 @@ Private repos consume limited GitHub Actions minutes (Free plan ~2,000 Linux min
 - `eric847b/autonomous-github-agent` — **private** — control plane / Catalyst (keep light; avoid frequent schedules)
 - `eric847b/collabhub-modules` — public
 - `eric847b/modular-hub-modernization` — public
-- `eric847b/zero-cost-wealth-playbook-tool` — public — **v1.0.2** (currency path: tracker, runway, experiment rank/suggest, quote; top experiment: setup-session-offer)
+- `eric847b/zero-cost-wealth-playbook-tool` — public — **v1.0.3** (currency path: tracker, runway, experiment rank/suggest, quote; top experiment: setup-session-offer)
 
 ## Free AI Pool (never pause)
 1. Local first (Ollama / LM Studio / LocalAI) — permanent free
@@ -42,13 +42,16 @@ Your choice. Highest-return root action first. Improve zero-cost continuous deve
 - Merged clean PRs: adaptiveos-dashboard vitest/vite security bumps, self-evolve-dash CI throttle, project-one YAML + TB monotonicity fixes.
 - singularity-operator **v0.5.20**: Release integrity (version parity, fail-closed executable, SHA-256 checksums).
 - singularity-operator **v0.5.19**: Deep currency experiment ranking (#43).
-- zero-cost-wealth-playbook-tool v1.0.2: CURRENCY_STATUS.md live with ranked experiments.
+- zero-cost-wealth-playbook-tool **v1.0.3**: CURRENCY_STATUS.md live with ranked experiments (setup-session-offer top).
 
 ## Recommended Architecture Adjustments
 - Move status / digest / heartbeat reporting that does not need private secrets into a public companion or into singularity-operator / AI-Collaboration-Hub.
 - Prefer `workflow_dispatch` over frequent cron on private repos.
 - Keep singularity-operator + AI-Collaboration-Hub as the primary never-pausing engines.
-- Next: act on top currency experiment (setup-session-offer) or expand free-AI self-improvement loops; resolve VectorFS #48 conflicts when ready.
+- **Next root actions (2026-11-09):**
+  1. Expand free-AI self-improvement loops & reliability (local-first + Pollinations + free tiers).
+  2. Keep currency path signals fresh; act only on real inbound for setup-session-offer (autonomous surface only).
+  3. Resolve VectorFS #48 conflicts when ready (lower priority vs free-AI/currency).
 
 ## How free AIs stay connected
 - Shared free provider pool across the core repos
