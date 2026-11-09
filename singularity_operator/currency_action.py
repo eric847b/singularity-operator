@@ -79,6 +79,11 @@ def plan_next_action(
     signal_at = cur.get("updated") or cur.get("at") or _utc_now()
     freshness_note = "live_signal_confirmed" if cur.get("ok") or cur.get("preferred_currency_path") else "fallback"
 
+    # v0.5.24: computed ROI-per-effort for ranking precision
+    exp_rev = play.get("expected_revenue") or 0
+    effort = play.get("effort") or 1
+    roi_per_effort = round(exp_rev / effort, 2) if effort else 0.0
+
     action = {
         "at": _utc_now(),
         "kind": "currency_next_action",
@@ -86,8 +91,9 @@ def plan_next_action(
         "experiment_id": exp_id,
         "top_score": score,
         "title": play["title"],
-        "expected_revenue": play.get("expected_revenue"),
-        "effort": play.get("effort"),
+        "expected_revenue": exp_rev,
+        "effort": effort,
+        "roi_per_effort": roi_per_effort,
         "steps": list(play.get("steps") or []),
         "repo": play.get("repo"),
         "artifacts": list(play.get("artifacts") or []),
@@ -119,5 +125,6 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"mode={action.get('mode', 'autonomous')} "
         f"title={action.get('title', '')[:50]} "
         f"score={action.get('top_score')} "
+        f"roi_pe={action.get('roi_per_effort', '?')} "
         f"fresh={action.get('signal_freshness', '?')}"
     )
