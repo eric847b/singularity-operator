@@ -18,3 +18,8 @@ def test_status_shape_and_helpers():
     assert status.get("local_first") is True
     assert "keys_present" in status
     assert isinstance(status["keys_present"], dict)
+    # v0.5.25 reliability: richer status
+    assert "provider_count" in status
+    assert status["provider_count"] >= 5
+    assert "TOGETHER_API_KEY" in status["keys_present"]
+    assert status.get("free_only") is True
