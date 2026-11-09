@@ -106,6 +106,19 @@ class FreeAIClient:
                 "cost_class": "free_tier_key",
             },
             {
+                "name": "together",
+                "url": "https://api.together.xyz/v1/chat/completions",
+                # Free-tier friendly default; override via TOGETHER_MODEL if needed
+                "model": _env("TOGETHER_MODEL", "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"),
+                "headers": lambda: {
+                    "Authorization": f"Bearer {_env('TOGETHER_API_KEY')}",
+                    "Content-Type": "application/json",
+                },
+                "key_required": True,
+                "key_env": "TOGETHER_API_KEY",
+                "cost_class": "free_tier_key",
+            },
+            {
                 "name": "gemini",
                 "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
                 "model": _env("GEMINI_MODEL", "gemini-2.0-flash"),
@@ -151,9 +164,11 @@ class FreeAIClient:
             "local_first": True,
             "pollinations_no_key": True,
             "policy": "paid only if self-funded; default free-only",
+            "provider_count": len(providers),
             "keys_present": {
                 "GROQ_API_KEY": bool(_env("GROQ_API_KEY")),
                 "OPENROUTER_API_KEY": bool(_env("OPENROUTER_API_KEY")),
+                "TOGETHER_API_KEY": bool(_env("TOGETHER_API_KEY")),
                 "GEMINI_API_KEY": bool(_env("GEMINI_API_KEY")),
             },
         }
