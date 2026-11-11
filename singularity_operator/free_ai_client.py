@@ -60,7 +60,6 @@ class FreeAIClient:
 
     def _providers(self) -> List[Dict[str, Any]]:
         """Ordered pool. All entries are free-tier or local; no paid-only models."""
-        # Note: even with keys, we only list free-tier model IDs.
         return [
             {
                 "name": "ollama",
@@ -93,7 +92,6 @@ class FreeAIClient:
             {
                 "name": "openrouter",
                 "url": "https://openrouter.ai/api/v1/chat/completions",
-                # Explicit free model slug — never a paid model id by default
                 "model": _env("OPENROUTER_MODEL", "meta-llama/llama-3-8b:free"),
                 "headers": lambda: {
                     "Authorization": f"Bearer {_env('OPENROUTER_API_KEY')}",
@@ -103,6 +101,18 @@ class FreeAIClient:
                 },
                 "key_required": True,
                 "key_env": "OPENROUTER_API_KEY",
+                "cost_class": "free_tier_key",
+            },
+            {
+                "name": "together",
+                "url": "https://api.together.xyz/v1/chat/completions",
+                "model": _env("TOGETHER_MODEL", "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"),
+                "headers": lambda: {
+                    "Authorization": f"Bearer {_env('TOGETHER_API_KEY')}",
+                    "Content-Type": "application/json",
+                },
+                "key_required": True,
+                "key_env": "TOGETHER_API_KEY",
                 "cost_class": "free_tier_key",
             },
             {
@@ -124,10 +134,8 @@ class FreeAIClient:
             return False
         if p.get("key_required") and not _env(p.get("key_env", "")):
             return False
-        # Under free_only, skip anything not marked free_*
         if self.free_only and not str(p.get("cost_class", "")).startswith("free"):
             return False
-        # Refuse openrouter models that are not clearly free when free_only
         if self.free_only and p["name"] == "openrouter":
             model = str(p.get("model") or "")
             if ":free" not in model and "free" not in model.lower():
@@ -151,9 +159,11 @@ class FreeAIClient:
             "local_first": True,
             "pollinations_no_key": True,
             "policy": "paid only if self-funded; default free-only",
+            "provider_count": len(providers),
             "keys_present": {
                 "GROQ_API_KEY": bool(_env("GROQ_API_KEY")),
                 "OPENROUTER_API_KEY": bool(_env("OPENROUTER_API_KEY")),
+                "TOGETHER_API_KEY": bool(_env("TOGETHER_API_KEY")),
                 "GEMINI_API_KEY": bool(_env("GEMINI_API_KEY")),
             },
         }
