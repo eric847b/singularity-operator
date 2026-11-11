@@ -58,6 +58,27 @@ EXPERIMENT_PLAYBOOK: Dict[str, Dict[str, Any]] = {
 DEFAULT_EXPERIMENT = "setup-session-offer"
 
 
+def _compute_roi_pe(play: Dict[str, Any]) -> float:
+    exp_rev = play.get("expected_revenue") or 0
+    effort = play.get("effort") or 1
+    return round(exp_rev / effort, 2) if effort else 0.0
+
+
+def _ranked_experiments() -> List[Dict[str, Any]]:
+    """v0.5.25: rank all playbook entries by ROI-per-effort."""
+    ranked = []
+    for eid, play in EXPERIMENT_PLAYBOOK.items():
+        ranked.append({
+            "experiment_id": eid,
+            "roi_per_effort": _compute_roi_pe(play),
+            "expected_revenue": play.get("expected_revenue") or 0,
+            "effort": play.get("effort") or 1,
+            "title": play.get("title", "")[:60],
+        })
+    ranked.sort(key=lambda x: x["roi_per_effort"], reverse=True)
+    return ranked
+
+
 def plan_next_action(
     currency_signal: Optional[Dict[str, Any]] = None,
     roi_pick: Optional[Dict[str, Any]] = None,
@@ -80,9 +101,16 @@ def plan_next_action(
     freshness_note = "live_signal_confirmed" if cur.get("ok") or cur.get("preferred_currency_path") else "fallback"
 
     # v0.5.24: computed ROI-per-effort for ranking precision
-    exp_rev = play.get("expected_revenue") or 0
-    effort = play.get("effort") or 1
-    roi_per_effort = round(exp_rev / effort, 2) if effort else 0.0
+    roi_per_effort = _compute_roi_pe(play)
+
+    # v0.5.25: ranked list + simple confidence from score + freshness
+    ranked = _ranked_experiments()
+    confidence = 0.7
+    if freshness_note == "live_signal_confirmed":
+        confidence += 0.2
+    if score and score >= 80:
+        confidence += 0.1
+    confidence = min(round(confidence, 2), 1.0)
 
     action = {
         "at": _utc_now(),
@@ -91,9 +119,11 @@ def plan_next_action(
         "experiment_id": exp_id,
         "top_score": score,
         "title": play["title"],
-        "expected_revenue": exp_rev,
-        "effort": effort,
+        "expected_revenue": play.get("expected_revenue") or 0,
+        "effort": play.get("effort") or 1,
         "roi_per_effort": roi_per_effort,
+        "ranked_experiments": ranked,
+        "confidence": confidence,
         "steps": list(play.get("steps") or []),
         "repo": play.get("repo"),
         "artifacts": list(play.get("artifacts") or []),
@@ -126,5 +156,6 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"title={action.get('title', '')[:50]} "
         f"score={action.get('top_score')} "
         f"roi_pe={action.get('roi_per_effort', '?')} "
+        f"conf={action.get('confidence', '?')} "
         f"fresh={action.get('signal_freshness', '?')}"
     )
