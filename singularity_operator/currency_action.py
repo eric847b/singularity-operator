@@ -22,7 +22,7 @@ EXPERIMENT_PLAYBOOK: Dict[str, Dict[str, Any]] = {
         "effort": 3,
         "steps": [
             "Autonomous: ensure offer/SOW/checklist templates remain accurate in wealth repo",
-            "Autonomous: publish currency_next_action + fleet signal for hub/agents",
+            "Autonomous: publish currency_next_action + digest signal for hub/agents",
             "Non-blocking optional: human capacity may book/deliver; not required for loop health",
             "Only after real payment: ledger write; never simulate income",
         ],
@@ -75,11 +75,9 @@ def plan_next_action(
     if exp_id not in EXPERIMENT_PLAYBOOK:
         exp_id = DEFAULT_EXPERIMENT
 
-    # v0.5.23: signal freshness for live confirmation
     signal_at = cur.get("updated") or cur.get("at") or _utc_now()
     freshness_note = "live_signal_confirmed" if cur.get("ok") or cur.get("preferred_currency_path") else "fallback"
 
-    # v0.5.24: computed ROI-per-effort for ranking precision
     exp_rev = play.get("expected_revenue") or 0
     effort = play.get("effort") or 1
     roi_per_effort = round(exp_rev / effort, 2) if effort else 0.0
@@ -120,11 +118,14 @@ def plan_next_action(
 
 
 def action_summary_line(action: Dict[str, Any]) -> str:
+    """Compact one-line summary that surfaces ROI-per-effort for ranking visibility."""
     return (
         f"next_action={action.get('experiment_id')} "
         f"mode={action.get('mode', 'autonomous')} "
-        f"title={action.get('title', '')[:50]} "
-        f"score={action.get('top_score')} "
         f"roi_pe={action.get('roi_per_effort', '?')} "
-        f"fresh={action.get('signal_freshness', '?')}"
+        f"score={action.get('top_score')} "
+        f"rev={action.get('expected_revenue')} "
+        f"effort={action.get('effort')} "
+        f"fresh={action.get('signal_freshness', '?')} "
+        f"title={str(action.get('title', ''))[:40]}"
     )
