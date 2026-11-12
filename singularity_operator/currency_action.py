@@ -65,7 +65,7 @@ def _compute_roi_pe(play: Dict[str, Any]) -> float:
 
 
 def _ranked_experiments() -> List[Dict[str, Any]]:
-    """v0.5.25: rank all playbook entries by ROI-per-effort."""
+    """v0.5.27: rank by ROI-per-effort, add rank + priority_score (roi weighted by inverse rank)."""
     ranked = []
     for eid, play in EXPERIMENT_PLAYBOOK.items():
         ranked.append({
@@ -76,6 +76,10 @@ def _ranked_experiments() -> List[Dict[str, Any]]:
             "title": play.get("title", "")[:60],
         })
     ranked.sort(key=lambda x: x["roi_per_effort"], reverse=True)
+    for i, item in enumerate(ranked):
+        item["rank"] = i + 1
+        # priority_score favors top ranks more heavily
+        item["priority_score"] = round(item["roi_per_effort"] / (i + 1), 2)
     return ranked
 
 
@@ -103,7 +107,7 @@ def plan_next_action(
     # v0.5.24: computed ROI-per-effort for ranking precision
     roi_per_effort = _compute_roi_pe(play)
 
-    # v0.5.25: ranked list + simple confidence from score + freshness
+    # v0.5.25/0.5.27: ranked list + confidence + priority
     ranked = _ranked_experiments()
     confidence = 0.7
     if freshness_note == "live_signal_confirmed":
@@ -111,6 +115,13 @@ def plan_next_action(
     if score and score >= 80:
         confidence += 0.1
     confidence = min(round(confidence, 2), 1.0)
+
+    # prefer highest priority if no explicit top
+    top_by_priority = ranked[0]["experiment_id"] if ranked else DEFAULT_EXPERIMENT
+    if not cur.get("top_experiment") and not roi.get("top_experiment"):
+        exp_id = top_by_priority
+        play = EXPERIMENT_PLAYBOOK[exp_id]
+        roi_per_effort = _compute_roi_pe(play)
 
     action = {
         "at": _utc_now(),

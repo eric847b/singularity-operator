@@ -1,5 +1,6 @@
-"""Singularity Operator v0.5.26 - Ultimate self-improving AI system.
+"""Singularity Operator v0.5.27 - Ultimate self-improving AI system.
 
+v0.5.27: Currency ranked experiments add rank position + priority_score (roi_pe weighted by rank) for sharper autonomous selection (#43).
 v0.5.26: FreeAIClient Together free-tier provider + provider_count status (#43).
 v0.5.25: Currency ranked experiments by ROI-per-effort + confidence scoring for #43.
 v0.5.24: Currency next-action adds computed roi_per_effort for ranking precision (#43).
@@ -47,7 +48,7 @@ from .dynamics_core import (
     STATE_INACTIVE,
 )
 
-__version__ = "0.5.26"
+__version__ = "0.5.27"
 __all__ = [
     "EverythingDB",
     "SelfImprover",
