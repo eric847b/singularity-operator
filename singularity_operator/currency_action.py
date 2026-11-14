@@ -65,7 +65,7 @@ def _compute_roi_pe(play: Dict[str, Any]) -> float:
 
 
 def _ranked_experiments() -> List[Dict[str, Any]]:
-    """v0.5.27: rank by ROI-per-effort, add rank + priority_score (roi weighted by inverse rank)."""
+    """v0.5.27+: rank by ROI-per-effort, add rank + priority_score (roi weighted by inverse rank)."""
     ranked = []
     for eid, play in EXPERIMENT_PLAYBOOK.items():
         ranked.append({
@@ -118,10 +118,14 @@ def plan_next_action(
 
     # prefer highest priority if no explicit top
     top_by_priority = ranked[0]["experiment_id"] if ranked else DEFAULT_EXPERIMENT
+    selection_reason = "explicit_signal" if (cur.get("top_experiment") or roi.get("top_experiment")) else "priority_rank"
     if not cur.get("top_experiment") and not roi.get("top_experiment"):
         exp_id = top_by_priority
         play = EXPERIMENT_PLAYBOOK[exp_id]
         roi_per_effort = _compute_roi_pe(play)
+        selection_reason = "priority_rank"
+
+    top_priority_score = ranked[0]["priority_score"] if ranked else 0.0
 
     action = {
         "at": _utc_now(),
@@ -135,6 +139,8 @@ def plan_next_action(
         "roi_per_effort": roi_per_effort,
         "ranked_experiments": ranked,
         "confidence": confidence,
+        "selection_reason": selection_reason,
+        "top_priority_score": top_priority_score,
         "steps": list(play.get("steps") or []),
         "repo": play.get("repo"),
         "artifacts": list(play.get("artifacts") or []),
@@ -168,5 +174,6 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"score={action.get('top_score')} "
         f"roi_pe={action.get('roi_per_effort', '?')} "
         f"conf={action.get('confidence', '?')} "
-        f"fresh={action.get('signal_freshness', '?')}"
+        f"fresh={action.get('signal_freshness', '?')} "
+        f"reason={action.get('selection_reason', '?')}"
     )
