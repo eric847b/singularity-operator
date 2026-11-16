@@ -129,6 +129,9 @@ def plan_next_action(
     top_priority_score = ranked[0]["priority_score"] if ranked else 0.0
     experiment_count = len(ranked)
     avg_priority_score = round(sum(item["priority_score"] for item in ranked) / experiment_count, 2) if experiment_count else 0.0
+    # v0.5.31: max_priority_score + top_avg_delta for sharper selection signal
+    max_priority_score = max((item["priority_score"] for item in ranked), default=0.0)
+    top_avg_delta = round(top_priority_score - avg_priority_score, 2)
 
     action = {
         "at": _utc_now(),
@@ -144,8 +147,10 @@ def plan_next_action(
         "confidence": confidence,
         "selection_reason": selection_reason,
         "top_priority_score": top_priority_score,
+        "max_priority_score": max_priority_score,
         "experiment_count": experiment_count,
         "avg_priority_score": avg_priority_score,
+        "top_avg_delta": top_avg_delta,
         "steps": list(play.get("steps") or []),
         "repo": play.get("repo"),
         "artifacts": list(play.get("artifacts") or []),
@@ -182,5 +187,7 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"fresh={action.get('signal_freshness', '?')} "
         f"reason={action.get('selection_reason', '?')} "
         f"count={action.get('experiment_count', '?')} "
-        f"avg_pri={action.get('avg_priority_score', '?')}"
+        f"avg_pri={action.get('avg_priority_score', '?')} "
+        f"max_pri={action.get('max_priority_score', '?')} "
+        f"delta={action.get('top_avg_delta', '?')}"
     )
