@@ -127,6 +127,8 @@ def plan_next_action(
         selection_reason = "priority_rank"
 
     top_priority_score = ranked[0]["priority_score"] if ranked else 0.0
+    experiment_count = len(ranked)
+    avg_priority_score = round(sum(item["priority_score"] for item in ranked) / experiment_count, 2) if experiment_count else 0.0
 
     action = {
         "at": _utc_now(),
@@ -142,6 +144,8 @@ def plan_next_action(
         "confidence": confidence,
         "selection_reason": selection_reason,
         "top_priority_score": top_priority_score,
+        "experiment_count": experiment_count,
+        "avg_priority_score": avg_priority_score,
         "steps": list(play.get("steps") or []),
         "repo": play.get("repo"),
         "artifacts": list(play.get("artifacts") or []),
@@ -176,5 +180,7 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"roi_pe={action.get('roi_per_effort', '?')} "
         f"conf={action.get('confidence', '?')} "
         f"fresh={action.get('signal_freshness', '?')} "
-        f"reason={action.get('selection_reason', '?')}"
+        f"reason={action.get('selection_reason', '?')} "
+        f"count={action.get('experiment_count', '?')} "
+        f"avg_pri={action.get('avg_priority_score', '?')}"
     )
