@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+import statistics
 
 
 def _utc_now() -> str:
@@ -132,6 +133,10 @@ def plan_next_action(
     # v0.5.31: max_priority_score + top_avg_delta for sharper selection signal
     max_priority_score = max((item["priority_score"] for item in ranked), default=0.0)
     top_avg_delta = round(top_priority_score - avg_priority_score, 2)
+    # v0.5.32: priority_variance + selection_margin for sharper fleet metrics
+    scores = [item["priority_score"] for item in ranked]
+    priority_variance = round(statistics.variance(scores), 2) if len(scores) > 1 else 0.0
+    selection_margin = round(top_priority_score - (ranked[1]["priority_score"] if len(ranked) > 1 else 0.0), 2)
 
     action = {
         "at": _utc_now(),
@@ -151,6 +156,8 @@ def plan_next_action(
         "experiment_count": experiment_count,
         "avg_priority_score": avg_priority_score,
         "top_avg_delta": top_avg_delta,
+        "priority_variance": priority_variance,
+        "selection_margin": selection_margin,
         "steps": list(play.get("steps") or []),
         "repo": play.get("repo"),
         "artifacts": list(play.get("artifacts") or []),
@@ -189,5 +196,7 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"count={action.get('experiment_count', '?')} "
         f"avg_pri={action.get('avg_priority_score', '?')} "
         f"max_pri={action.get('max_priority_score', '?')} "
-        f"delta={action.get('top_avg_delta', '?')}"
+        f"delta={action.get('top_avg_delta', '?')} "
+        f"var={action.get('priority_variance', '?')} "
+        f"margin={action.get('selection_margin', '?')}"
     )
