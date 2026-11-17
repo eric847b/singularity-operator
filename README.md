@@ -1,1 +1,128 @@
-PLACEHOLDER_README
+# Singularity Operator v0.5.34
+
+**Self-improving AI system** with EverythingDB, fleet orchestration, AGA metrics feedback, **deep currency experiment ranking**, AGA usage/credits visibility, and continuous upgrade from live ROI ranking — powered by a zero-cost free AI rotator.
+
+## Overview
+
+Singularity Operator is an experimental autonomous knowledge, validation, and orchestration platform.
+
+The project focuses on:
+
+- Memory systems
+- Agent collaboration
+- Knowledge validation
+- Architecture evolution
+- Cross-system orchestration
+
+The goal is practical autonomous system development through iterative evolution rather than speculative end-state intelligence claims.
+
+See [ROADMAP.md](ROADMAP.md) and [docs/](docs/) for the phased plan, architecture, and documentation policy.
+
+## Free AI Capacity
+
+Continuous development loops use `singularity_operator/free_ai_client.py`:
+
+| Priority | Provider        | Key required? | Notes                          |
+|----------|-----------------|---------------|--------------------------------|
+| 1        | Ollama (local)  | No            | Permanent free, your hardware  |
+| 2        | Pollinations    | **No**        | Zero-key cloud free tier       |
+| 3        | Groq free       | Optional      | Free tier with key             |
+| 4        | OpenRouter free | Optional      | `:free` models                 |
+| 5        | Together free   | Optional      | Free tier                      |
+
+Seamless failover — work never pauses on rate limits or missing keys.  
+`FreeAIClient.get_status()` surfaces live available providers + tally for ROI / Orchestrator.
+
+## Currency fleet signal + experiment ranking
+
+`GitHubSeamless.fetch_currency_signals()` pulls version + capabilities + **top_experiment / top_score** from `eric847b/zero-cost-wealth-playbook-tool` (CURRENCY_STATUS.md JSON).  
+Orchestrator task `currency_signal` stores the signal; `continuous_roi_rank` **hard-biases** toward the highest expected $/effort open experiment when the signal is live.
+
+## Releases & Windows executable
+
+Download the latest **Release** from the [Releases page](https://github.com/eric847b/singularity-operator/releases).
+
+- **`singularity-operator.exe`** — single-file Windows launcher
+- Wheel / sdist for `pip install`
+- **`SHA256SUMS`** — verify downloaded release assets before use
+
+The release workflow checks that `VERSION`, `pyproject.toml`, `singularity_operator/__init__.py`, the README heading, and the pushed tag all agree. Required builds fail closed; optional executable builds are not silently ignored.
+
+After the v0.5.34 changes are merged, publish the matching tag:
+
+```bash
+git pull --ff-only origin main
+git tag v0.5.34
+git push origin v0.5.34
+```
+
+## What's New in v0.5.34
+- Currency action adds priority_median + priority_iqr for sharper fleet selection metrics (#43).
+
+## What's New in v0.5.33
+- Currency action adds priority_std_dev for sharper fleet selection metrics (#43).
+
+## What's New in v0.5.32
+- Currency action adds priority_variance + selection_margin for sharper fleet selection metrics (#43).
+
+## What's New in v0.5.31
+- Currency action adds max_priority_score + top_avg_delta for sharper fleet selection metrics (#43).
+
+## What's New in v0.5.30
+- Currency action adds experiment_count + avg_priority_score for sharper fleet metrics (#43).
+
+## What's New in v0.5.29
+- Currency priority_score now multiplies by confidence for sharper live ranking (#43).
+
+## What's New in v0.5.28
+- Currency action adds `selection_reason` + `top_priority_score` for sharper autonomous pick (#43).
+
+## What's New in v0.5.27
+- Currency ranked experiments add rank position + priority_score (roi_pe weighted by rank) for sharper autonomous selection (#43).
+
+## What's New in v0.5.26
+- FreeAIClient Together free-tier provider + provider_count status (#43).
+
+## What's New in v0.5.25
+- Currency ranked experiments by ROI-per-effort + confidence scoring for #43 continuous upgrade.
+
+## What's New in v0.5.24
+- Currency next-action adds computed `roi_per_effort` metric for ranking precision on #43.
+
+## What's New in v0.5.23
+- Currency next-action signal freshness + live confirmation provenance for #43.
+
+## What's New in v0.5.22
+- AGA usage/credits visibility + currency parity in orchestrator telemetry and evolution summaries.
+- Full version surface parity (VERSION / pyproject / __init__ / README / orchestrator).
+
+## What's New in v0.5.20
+- Hardened release integrity checks across package metadata, runtime version, README, and Git tag.
+- Release builds fail closed instead of silently ignoring a failed secondary executable build.
+- Published SHA-256 checksums for release artifacts and narrowed workflow write permissions to the release job.
+
+## What's New in v0.5.19
+- Deep currency experiment ranking (#43): `top_experiment` + `top_score` flow from CURRENCY_STATUS.md into `continuous_roi_rank`.
+- Hard preference for highest expected-revenue/effort open experiment (currently setup-session-offer).
+- Full version sync (VERSION / pyproject / __init__ / README / CONTINUOUS_CONTEXT / modules).
+
+## What's New in v0.5.18
+- Deepen currency signal (#43): parse full CURRENCY_STATUS.md JSON block.
+
+## What's New in v0.5.17
+- Currency fleet signal wired (#43): `fetch_currency_signals` + `currency_signal` cycle task.
+- `continuous_roi_rank` records currency version/preference and prefers wealth path when signal is live.
+- Fleet sync includes zero-cost-wealth-playbook-tool.
+
+## Quick Start
+```bash
+pip install -e .
+python singularity_operator.py
+```
+
+Requires `GITHUB_TOKEN` / `GH_FULL_PAT` for live AGA ingest, currency signals, and fleet actions.
+
+## Architecture
+EverythingDB · SelfImprover (free-AI primary) · Chaos · Serendipity · Browser · Userscript · GitHubSeamless (AGA + **currency + top experiment**) · Orchestrator (continuous_roi_rank + currency_signal) · FreeAIClient
+
+*Status: v0.5.34 version parity complete; publish tag after CI passes.*
