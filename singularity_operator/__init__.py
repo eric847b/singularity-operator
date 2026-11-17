@@ -1,5 +1,6 @@
-"""Singularity Operator v0.5.33 - Ultimate self-improving AI system.
+"""Singularity Operator v0.5.34 - Ultimate self-improving AI system.
 
+v0.5.34: Currency action adds priority_median + priority_iqr for sharper fleet selection metrics (#43).
 v0.5.33: Currency action adds priority_std_dev for sharper fleet selection metrics (#43).
 v0.5.32: Currency action adds priority_variance + selection_margin for sharper fleet selection metrics (#43).
 v0.5.31: Currency action adds max_priority_score + top_avg_delta for sharper fleet selection metrics (#43).
@@ -54,7 +55,7 @@ from .dynamics_core import (
     STATE_INACTIVE,
 )
 
-__version__ = "0.5.33"
+__version__ = "0.5.34"
 __all__ = [
     "EverythingDB",
     "SelfImprover",
