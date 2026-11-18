@@ -141,6 +141,9 @@ def plan_next_action(
         priority_iqr = round(q3 - q1, 2)
     else:
         priority_iqr = 0.0
+    min_priority_score = min(scores) if scores else 0.0
+    priority_range = round(max_priority_score - min_priority_score, 2)
+    priority_cv = round(priority_std_dev / avg_priority_score, 3) if avg_priority_score > 0 else 0.0
 
     action = {
         "at": _utc_now(),
@@ -165,6 +168,8 @@ def plan_next_action(
         "priority_std_dev": priority_std_dev,
         "priority_median": priority_median,
         "priority_iqr": priority_iqr,
+        "priority_range": priority_range,
+        "priority_cv": priority_cv,
         "steps": list(play.get("steps") or []),
         "repo": play.get("repo"),
         "artifacts": list(play.get("artifacts") or []),
@@ -208,5 +213,7 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"margin={action.get('selection_margin', '?')} "
         f"std={action.get('priority_std_dev', '?')} "
         f"med={action.get('priority_median', '?')} "
-        f"iqr={action.get('priority_iqr', '?')}"
+        f"iqr={action.get('priority_iqr', '?')} "
+        f"range={action.get('priority_range', '?')} "
+        f"cv={action.get('priority_cv', '?')}"
     )
