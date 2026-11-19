@@ -1,6 +1,6 @@
 # Continuous Free-AI Context & Roadmap
 
-**Last updated:** 2026-11-09  
+**Last updated:** 2026-11-19  
 **Purpose:** Keep free AIs (local + Pollinations no-key + free tiers) fully context-aware and connected to everything they need while they add software and fix things continuously.
 
 ## Hard Constraint (2026-10-15)
@@ -9,12 +9,12 @@ Private repos consume limited GitHub Actions minutes (Free plan ~2,000 Linux min
 **Consequence:** Fleet Maintenance and other scheduled workflows on the private `autonomous-github-agent` were disabled because usage exceeded available private quota. Do not re-enable heavy private schedules until the architecture is public-first or self-hosted.
 
 ## Fleet (always in scope)
-- `eric847b/AI-Collaboration-Hub` — public — FreeAIRotator + suite (prefer for continuous work)
-- `eric847b/singularity-operator` — public — FreeAIClient + Auto-Evolve — **v0.5.24**
+- `eric847b/AI-Collaboration-Hub` — public — FreeAIRotator + suite + CI Self-Heal (prefer for continuous work)
+- `eric847b/singularity-operator` — public — FreeAIClient + Auto-Evolve — **v0.5.35**
 - `eric847b/autonomous-github-agent` — **private** — control plane / Catalyst (keep light; avoid frequent schedules)
 - `eric847b/collabhub-modules` — public
 - `eric847b/modular-hub-modernization` — public
-- `eric847b/zero-cost-wealth-playbook-tool` — public — **v1.0.2** (currency path: tracker, runway, experiment rank/suggest, quote; top experiment: setup-session-offer)
+- `eric847b/zero-cost-wealth-playbook-tool` — public — **v1.0.3** (currency path: tracker, runway, experiment rank/suggest, quote; top experiment: setup-session-offer @ 49.67)
 
 ## Free AI Pool (never pause)
 1. Local first (Ollama / LM Studio / LocalAI) — permanent free
@@ -28,27 +28,25 @@ Private repos consume limited GitHub Actions minutes (Free plan ~2,000 Linux min
 Your choice. Highest-return root action first. Improve zero-cost continuous development, free AI capacity, currency/wealth path, and software that fixes itself. Keep full context of the fleet. Respect private Actions minute limit — prefer public repos and local runners. Produce real measurable progress.
 ```
 
-## Current High-ROI Themes (updated 2026-11-09)
+## Current High-ROI Themes (updated 2026-11-19)
 1. **Public-first continuous loops** — keep Auto-Evolve, ROI, quality gates, free-AI refinement on public repos only.
-2. **Currency path first-class + experiment ranking** — zero-cost-wealth-playbook-tool signals (including top_experiment/top_score) are ingested via `fetch_currency_signals` and hard-biased inside `continuous_roi_rank` (v0.5.19+). v0.5.24 adds roi_per_effort metric on next actions.
-3. **Minimize private quota burn** — throttle CI (self-evolve-dash #49 merged), prefer workflow_dispatch on private repos.
+2. **Currency path first-class + experiment ranking** — zero-cost-wealth-playbook-tool signals (including top_experiment/top_score) are ingested via `fetch_currency_signals` and hard-biased inside `continuous_roi_rank`. v0.5.35 adds priority_range + priority_cv for sharper fleet selection.
+3. **Minimize private quota burn** — throttle CI, prefer workflow_dispatch on private repos.
 4. Expand free AI capacity and reliability (FreeAIClient.get_status live; tests + .bandit keep Codacy clean).
 5. Real measurable progress only (no simulated work).
 
 ## Recent measurable progress
-- singularity-operator **v0.5.24**: Currency next-action roi_per_effort metric for ranking precision on #43. Full version parity maintained.
-- singularity-operator **v0.5.23**: Currency action signal freshness + live confirmation provenance for #43. Full version parity maintained.
-- singularity-operator **v0.5.22**: Full version parity (VERSION / pyproject / __init__ / README / orchestrator) + AGA usage/credits visibility.
-- Merged clean PRs: adaptiveos-dashboard vitest/vite security bumps, self-evolve-dash CI throttle, project-one YAML + TB monotonicity fixes.
-- singularity-operator **v0.5.20**: Release integrity (version parity, fail-closed executable, SHA-256 checksums).
-- singularity-operator **v0.5.19**: Deep currency experiment ranking (#43).
-- zero-cost-wealth-playbook-tool v1.0.2: CURRENCY_STATUS.md live with ranked experiments.
+- singularity-operator **v0.5.35**: Currency metrics priority_range + priority_cv for sharper fleet selection (#43). Full version parity.
+- singularity-operator **v0.5.24–0.5.34**: Currency next-action roi_per_effort, signal freshness, provenance, deep ranking stats.
+- zero-cost-wealth-playbook-tool **v1.0.3**: CURRENCY_STATUS.md live; top experiment setup-session-offer (score 49.67, $149).
+- Continuous Auto-Evolve success streak on public runners (Nov 19 2026 runs #835–#838+).
+- CI Self-Heal on AI-Collaboration-Hub with auto_merge_dependabot active; open Dependabot PRs remain dirty/conflicted (no force-merge).
 
 ## Recommended Architecture Adjustments
 - Move status / digest / heartbeat reporting that does not need private secrets into a public companion or into singularity-operator / AI-Collaboration-Hub.
 - Prefer `workflow_dispatch` over frequent cron on private repos.
 - Keep singularity-operator + AI-Collaboration-Hub as the primary never-pausing engines.
-- Next: act on top currency experiment (setup-session-offer) or expand free-AI self-improvement loops; resolve VectorFS #48 conflicts when ready.
+- Next: act on top currency experiment (setup-session-offer) surface accuracy or expand free-AI self-improvement loops; resolve dirty Dependabot PRs only when clean/green.
 
 ## How free AIs stay connected
 - Shared free provider pool across the core repos
