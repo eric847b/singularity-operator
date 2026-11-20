@@ -151,6 +151,13 @@ def plan_next_action(
         priority_skewness = round((cubed_devs / n) / (priority_std_dev ** 3), 3)
     else:
         priority_skewness = 0.0
+    # Excess kurtosis: (mean fourth powers) / std^4 - 3
+    if n > 3 and priority_std_dev > 0:
+        mean = avg_priority_score
+        fourth_devs = sum((s - mean) ** 4 for s in scores)
+        priority_kurtosis = round((fourth_devs / n) / (priority_std_dev ** 4) - 3, 3)
+    else:
+        priority_kurtosis = 0.0
 
     action = {
         "at": _utc_now(),
@@ -178,6 +185,7 @@ def plan_next_action(
         "priority_range": priority_range,
         "priority_cv": priority_cv,
         "priority_skewness": priority_skewness,
+        "priority_kurtosis": priority_kurtosis,
         "steps": list(play.get("steps") or []),
         "repo": play.get("repo"),
         "artifacts": list(play.get("artifacts") or []),
@@ -224,5 +232,6 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"iqr={action.get('priority_iqr', '?')} "
         f"range={action.get('priority_range', '?')} "
         f"cv={action.get('priority_cv', '?')} "
-        f"skew={action.get('priority_skewness', '?')}"
+        f"skew={action.get('priority_skewness', '?')} "
+        f"kurt={action.get('priority_kurtosis', '?')}"
     )
