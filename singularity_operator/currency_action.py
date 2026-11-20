@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 import statistics
+import math
 
 
 def _utc_now() -> str:
@@ -158,6 +159,14 @@ def plan_next_action(
         priority_kurtosis = round((fourth_devs / n) / (priority_std_dev ** 4) - 3, 3)
     else:
         priority_kurtosis = 0.0
+    # Shannon entropy of normalized priority scores (higher = more diversity/uncertainty)
+    priority_entropy = 0.0
+    if n > 0 and sum(scores) > 0:
+        total = sum(scores)
+        probs = [s / total for s in scores if s > 0]
+        if probs:
+            entropy = -sum(p * math.log2(p) for p in probs)
+            priority_entropy = round(entropy, 3)
 
     action = {
         "at": _utc_now(),
@@ -186,6 +195,7 @@ def plan_next_action(
         "priority_cv": priority_cv,
         "priority_skewness": priority_skewness,
         "priority_kurtosis": priority_kurtosis,
+        "priority_entropy": priority_entropy,
         "steps": list(play.get("steps") or []),
         "repo": play.get("repo"),
         "artifacts": list(play.get("artifacts") or []),
@@ -233,5 +243,6 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"range={action.get('priority_range', '?')} "
         f"cv={action.get('priority_cv', '?')} "
         f"skew={action.get('priority_skewness', '?')} "
-        f"kurt={action.get('priority_kurtosis', '?')}"
+        f"kurt={action.get('priority_kurtosis', '?')} "
+        f"ent={action.get('priority_entropy', '?')}"
     )
