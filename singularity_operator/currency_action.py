@@ -144,6 +144,13 @@ def plan_next_action(
     min_priority_score = min(scores) if scores else 0.0
     priority_range = round(max_priority_score - min_priority_score, 2)
     priority_cv = round(priority_std_dev / avg_priority_score, 3) if avg_priority_score > 0 else 0.0
+    # Skewness: (mean cubed deviations) / std^3
+    if n > 2 and priority_std_dev > 0:
+        mean = avg_priority_score
+        cubed_devs = sum((s - mean) ** 3 for s in scores)
+        priority_skewness = round((cubed_devs / n) / (priority_std_dev ** 3), 3)
+    else:
+        priority_skewness = 0.0
 
     action = {
         "at": _utc_now(),
@@ -170,6 +177,7 @@ def plan_next_action(
         "priority_iqr": priority_iqr,
         "priority_range": priority_range,
         "priority_cv": priority_cv,
+        "priority_skewness": priority_skewness,
         "steps": list(play.get("steps") or []),
         "repo": play.get("repo"),
         "artifacts": list(play.get("artifacts") or []),
@@ -215,5 +223,6 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"med={action.get('priority_median', '?')} "
         f"iqr={action.get('priority_iqr', '?')} "
         f"range={action.get('priority_range', '?')} "
-        f"cv={action.get('priority_cv', '?')}"
+        f"cv={action.get('priority_cv', '?')} "
+        f"skew={action.get('priority_skewness', '?')}"
     )
