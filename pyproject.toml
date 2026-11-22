@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "singularity-operator"
-version = "0.5.42"
-description = "Ultimate self-improving AI (Singularity Operator): EverythingDB + SelfImprover + Orchestrator + FreeAIClient (Together free-tier) + continuous ROI ranking + deep currency experiment ranking (top_experiment/top_score from CURRENCY_STATUS.md) + ranked experiments by ROI-per-effort + confidence + rank position + priority_score (confidence-weighted) + selection_reason + experiment_count + avg_priority_score + max_priority_score + top_avg_delta + priority_variance + selection_margin + priority_std_dev + priority_median + priority_iqr + priority_range + priority_cv + priority_skewness + priority_kurtosis + priority_entropy + priority_gini + priority_hhi + priority_top_share + priority_effective_n. AGA usage/credits visibility."
+version = "0.5.43"
+description = "Ultimate self-improving AI (Singularity Operator): EverythingDB + SelfImprover + Orchestrator + FreeAIClient (Together free-tier) + continuous ROI ranking + deep currency experiment ranking (top_experiment/top_score from CURRENCY_STATUS.md) + ranked experiments by ROI-per-effort + confidence + rank position + priority_score (confidence-weighted) + selection_reason + experiment_count + avg_priority_score + max_priority_score + top_avg_delta + priority_variance + selection_margin + priority_std_dev + priority_median + priority_iqr + priority_range + priority_cv + priority_skewness + priority_kurtosis + priority_entropy + priority_gini + priority_hhi + priority_top_share + priority_effective_n + priority_top_rest_ratio. AGA usage/credits visibility."
 authors = [{name = "Eric (Mufnluvn)"}]
 readme = "README.md"
 requires-python = ">=3.10"
