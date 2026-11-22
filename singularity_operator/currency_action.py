@@ -182,6 +182,11 @@ def plan_next_action(
         total = sum(scores)
         shares = [s / total for s in scores]
         priority_hhi = round(sum(s * s for s in shares), 3)
+    # Top share: fraction of total priority mass held by the leading experiment
+    priority_top_share = 0.0
+    if n > 0 and sum(scores) > 0:
+        total = sum(scores)
+        priority_top_share = round(top_priority_score / total, 3)
 
     action = {
         "at": _utc_now(),
@@ -213,6 +218,7 @@ def plan_next_action(
         "priority_entropy": priority_entropy,
         "priority_gini": priority_gini,
         "priority_hhi": priority_hhi,
+        "priority_top_share": priority_top_share,
         "steps": list(play.get("steps") or []),
         "repo": play.get("repo"),
         "artifacts": list(play.get("artifacts") or []),
@@ -263,5 +269,6 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"kurt={action.get('priority_kurtosis', '?')} "
         f"ent={action.get('priority_entropy', '?')} "
         f"gini={action.get('priority_gini', '?')} "
-        f"hhi={action.get('priority_hhi', '?')}"
+        f"hhi={action.get('priority_hhi', '?')} "
+        f"top_share={action.get('priority_top_share', '?')}"
     )

@@ -1,5 +1,6 @@
-"""Singularity Operator v0.5.40 - Ultimate self-improving AI system.
+"""Singularity Operator v0.5.41 - Ultimate self-improving AI system.
 
+v0.5.41: Currency action adds priority_top_share for sharper fleet selection metrics (#43). Version parity restored.
 v0.5.40: Currency action adds priority_hhi for sharper fleet selection metrics (#43). Version parity restored.
 v0.5.39: Currency action adds priority_gini for sharper fleet selection metrics (#43). Version parity restored.
 v0.5.38: Currency action adds priority_entropy for sharper fleet selection metrics (#43). Version parity restored.
@@ -61,7 +62,7 @@ from .dynamics_core import (
     STATE_INACTIVE,
 )
 
-__version__ = "0.5.40"
+__version__ = "0.5.41"
 __all__ = [
     "EverythingDB",
     "SelfImprover",
