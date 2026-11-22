@@ -187,6 +187,8 @@ def plan_next_action(
     if n > 0 and sum(scores) > 0:
         total = sum(scores)
         priority_top_share = round(top_priority_score / total, 3)
+    # Effective number of experiments: 1 / HHI (1 = fully concentrated, n = fully equal)
+    priority_effective_n = round(1.0 / priority_hhi, 2) if priority_hhi > 0 else float(n)
 
     action = {
         "at": _utc_now(),
@@ -219,6 +221,7 @@ def plan_next_action(
         "priority_gini": priority_gini,
         "priority_hhi": priority_hhi,
         "priority_top_share": priority_top_share,
+        "priority_effective_n": priority_effective_n,
         "steps": list(play.get("steps") or []),
         "repo": play.get("repo"),
         "artifacts": list(play.get("artifacts") or []),
@@ -270,5 +273,6 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"ent={action.get('priority_entropy', '?')} "
         f"gini={action.get('priority_gini', '?')} "
         f"hhi={action.get('priority_hhi', '?')} "
-        f"top_share={action.get('priority_top_share', '?')}"
+        f"top_share={action.get('priority_top_share', '?')} "
+        f"eff_n={action.get('priority_effective_n', '?')}"
     )
