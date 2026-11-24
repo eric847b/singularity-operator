@@ -1,6 +1,6 @@
 # Continuous Free-AI Context & Roadmap
 
-**Last updated:** 2026-11-19  
+**Last updated:** 2026-11-24  
 **Purpose:** Keep free AIs (local + Pollinations no-key + free tiers) fully context-aware and connected to everything they need while they add software and fix things continuously.
 
 ## Hard Constraint (2026-10-15)
@@ -10,7 +10,7 @@ Private repos consume limited GitHub Actions minutes (Free plan ~2,000 Linux min
 
 ## Fleet (always in scope)
 - `eric847b/AI-Collaboration-Hub` — public — FreeAIRotator + suite + CI Self-Heal (prefer for continuous work)
-- `eric847b/singularity-operator` — public — FreeAIClient + Auto-Evolve — **v0.5.35**
+- `eric847b/singularity-operator` — public — FreeAIClient + Auto-Evolve — **v0.5.44**
 - `eric847b/autonomous-github-agent` — **private** — control plane / Catalyst (keep light; avoid frequent schedules)
 - `eric847b/collabhub-modules` — public
 - `eric847b/modular-hub-modernization` — public
@@ -28,18 +28,18 @@ Private repos consume limited GitHub Actions minutes (Free plan ~2,000 Linux min
 Your choice. Highest-return root action first. Improve zero-cost continuous development, free AI capacity, currency/wealth path, and software that fixes itself. Keep full context of the fleet. Respect private Actions minute limit — prefer public repos and local runners. Produce real measurable progress.
 ```
 
-## Current High-ROI Themes (updated 2026-11-19)
+## Current High-ROI Themes (updated 2026-11-24)
 1. **Public-first continuous loops** — keep Auto-Evolve, ROI, quality gates, free-AI refinement on public repos only.
-2. **Currency path first-class + experiment ranking** — zero-cost-wealth-playbook-tool signals (including top_experiment/top_score) are ingested via `fetch_currency_signals` and hard-biased inside `continuous_roi_rank`. v0.5.35 adds priority_range + priority_cv for sharper fleet selection.
+2. **Currency path first-class + experiment ranking** — zero-cost-wealth-playbook-tool signals (including top_experiment/top_score) are ingested via `fetch_currency_signals` and hard-biased inside `continuous_roi_rank`. v0.5.44 adds days_since_signal, next_concrete_step, and stale-signal confidence decay for sharper actionable selection.
 3. **Minimize private quota burn** — throttle CI, prefer workflow_dispatch on private repos.
 4. Expand free AI capacity and reliability (FreeAIClient.get_status live; tests + .bandit keep Codacy clean).
 5. Real measurable progress only (no simulated work).
 
 ## Recent measurable progress
-- singularity-operator **v0.5.35**: Currency metrics priority_range + priority_cv for sharper fleet selection (#43). Full version parity.
-- singularity-operator **v0.5.24–0.5.34**: Currency next-action roi_per_effort, signal freshness, provenance, deep ranking stats.
+- singularity-operator **v0.5.44**: Currency action adds days_since_signal + next_concrete_step + stale-signal confidence decay (#43). Full version parity.
+- singularity-operator **v0.5.35–0.5.43**: Currency metrics priority_range / cv / skew / kurt / entropy / gini / hhi / top_share / effective_n / top_rest_ratio.
 - zero-cost-wealth-playbook-tool **v1.0.3**: CURRENCY_STATUS.md live; top experiment setup-session-offer (score 49.67, $149).
-- Continuous Auto-Evolve success streak on public runners (Nov 19 2026 runs #835–#838+).
+- Continuous Auto-Evolve success streak on public runners.
 - CI Self-Heal on AI-Collaboration-Hub with auto_merge_dependabot active; open Dependabot PRs remain dirty/conflicted (no force-merge).
 
 ## Recommended Architecture Adjustments

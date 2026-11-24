@@ -1,4 +1,4 @@
-# Singularity Operator v0.5.43
+# Singularity Operator v0.5.44
 
 **Self-improving AI system** with EverythingDB, fleet orchestration, AGA metrics feedback, **deep currency experiment ranking**, AGA usage/credits visibility, and continuous upgrade from live ROI ranking — powered by a zero-cost free AI rotator.
 
@@ -38,6 +38,8 @@ Seamless failover — work never pauses on rate limits or missing keys.
 `GitHubSeamless.fetch_currency_signals()` pulls version + capabilities + **top_experiment / top_score** from `eric847b/zero-cost-wealth-playbook-tool` (CURRENCY_STATUS.md JSON).  
 Orchestrator task `currency_signal` stores the signal; `continuous_roi_rank` **hard-biases** toward the highest expected $/effort open experiment when the signal is live.
 
+v0.5.44 adds `days_since_signal`, confidence decay on stale signals, and `next_concrete_step` (first Autonomous step) so fleet agents can act without parsing the full step list.
+
 ## Releases & Windows executable
 
 Download the latest **Release** from the [Releases page](https://github.com/eric847b/singularity-operator/releases).
@@ -48,13 +50,16 @@ Download the latest **Release** from the [Releases page](https://github.com/eric
 
 The release workflow checks that `VERSION`, `pyproject.toml`, `singularity_operator/__init__.py`, the README heading, and the pushed tag all agree. Required builds fail closed; optional executable builds are not silently ignored.
 
-After the v0.5.43 changes are merged, publish the matching tag:
+After the v0.5.44 changes are merged, publish the matching tag:
 
 ```bash
 git pull --ff-only origin main
-git tag v0.5.43
-git push origin v0.5.43
+git tag v0.5.44
+git push origin v0.5.44
 ```
+
+## What's New in v0.5.44
+- Currency action adds `days_since_signal`, stale-signal confidence decay, and `next_concrete_step` for sharper actionable fleet selection (#43). Version parity restored.
 
 ## What's New in v0.5.43
 - Currency action adds priority_top_rest_ratio for sharper fleet selection metrics (#43). Version parity restored.
@@ -152,4 +157,4 @@ Requires `GITHUB_TOKEN` / `GH_FULL_PAT` for live AGA ingest, currency signals, a
 ## Architecture
 EverythingDB · SelfImprover (free-AI primary) · Chaos · Serendipity · Browser · Userscript · GitHubSeamless (AGA + **currency + top experiment**) · Orchestrator (continuous_roi_rank + currency_signal) · FreeAIClient
 
-*Status: v0.5.43 version parity complete; publish tag after CI passes.*
+*Status: v0.5.44 version parity complete; publish tag after CI passes.*
