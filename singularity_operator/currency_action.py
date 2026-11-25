@@ -4,6 +4,7 @@ Turns top_experiment / top_score into a recorded next action with provenance.
 Autonomous mode: records and publishes; does not require human outreach to run.
 Never marks won without real payment — payment cannot be fabricated by the loop.
 
+v0.5.45: priority_mad (median absolute deviation) for robust dispersion of priority scores.
 v0.5.44: days_since_signal + next_concrete_step + stale-signal confidence decay.
 """
 
@@ -250,6 +251,12 @@ def plan_next_action(
     if n > 1 and sum(scores) > top_priority_score:
         rest_sum = sum(scores) - top_priority_score
         priority_top_rest_ratio = round(top_priority_score / rest_sum, 3) if rest_sum > 0 else float("inf")
+    # v0.5.45: robust dispersion via median absolute deviation
+    priority_mad = 0.0
+    if n > 0:
+        med = priority_median
+        abs_devs = [abs(s - med) for s in scores]
+        priority_mad = round(statistics.median(abs_devs), 3) if abs_devs else 0.0
 
     steps = list(play.get("steps") or [])
     next_concrete_step = _first_autonomous_step(steps)
@@ -287,6 +294,7 @@ def plan_next_action(
         "priority_top_share": priority_top_share,
         "priority_effective_n": priority_effective_n,
         "priority_top_rest_ratio": priority_top_rest_ratio,
+        "priority_mad": priority_mad,
         "days_since_signal": days_since,
         "next_concrete_step": next_concrete_step,
         "steps": steps,
@@ -344,5 +352,6 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"hhi={action.get('priority_hhi', '?')} "
         f"top_share={action.get('priority_top_share', '?')} "
         f"eff_n={action.get('priority_effective_n', '?')} "
-        f"top_rest={action.get('priority_top_rest_ratio', '?')}"
+        f"top_rest={action.get('priority_top_rest_ratio', '?')} "
+        f"mad={action.get('priority_mad', '?')}"
     )
