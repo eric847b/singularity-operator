@@ -4,6 +4,7 @@ Turns top_experiment / top_score into a recorded next action with provenance.
 Autonomous mode: records and publishes; does not require human outreach to run.
 Never marks won without real payment — payment cannot be fabricated by the loop.
 
+v0.5.46: Prefer live currency signal next_concrete_step over playbook default.
 v0.5.45: priority_mad (median absolute deviation) for robust dispersion of priority scores.
 v0.5.44: days_since_signal + next_concrete_step + stale-signal confidence decay.
 """
@@ -29,30 +30,17 @@ def _parse_signal_date(raw: Any) -> Optional[datetime]:
     s = str(raw).strip()
     if not s:
         return None
-    # Common forms: 2026-11-19, 2026-11-19T12:00:00Z, ISO with offset
-    for fmt in (
-        "%Y-%m-%dT%H:%M:%S.%fZ",
-        "%Y-%m-%dT%H:%M:%SZ",
-        "%Y-%m-%dT%H:%M:%S%z",
-        "%Y-%m-%dT%H:%M:%S.%f%z",
-        "%Y-%m-%d",
-    ):
-        try:
-            dt = datetime.strptime(s.replace("+00:00", "Z").rstrip("Z") + ("Z" if "T" in s and not s.endswith("Z") and "+" not in s[-6:] else ""), fmt) if False else None
-        except Exception:
-            dt = None
-        try:
-            cleaned = s.replace("Z", "+00:00") if s.endswith("Z") else s
-            if "T" in cleaned:
-                dt = datetime.fromisoformat(cleaned)
-            else:
-                dt = datetime.strptime(cleaned[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return dt
-        except Exception:
-            continue
-    return None
+    try:
+        cleaned = s.replace("Z", "+00:00") if s.endswith("Z") else s
+        if "T" in cleaned:
+            dt = datetime.fromisoformat(cleaned)
+        else:
+            dt = datetime.strptime(cleaned[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except Exception:
+        return None
 
 
 def _days_since(signal_at: Any) -> Optional[float]:
@@ -259,7 +247,9 @@ def plan_next_action(
         priority_mad = round(statistics.median(abs_devs), 3) if abs_devs else 0.0
 
     steps = list(play.get("steps") or [])
-    next_concrete_step = _first_autonomous_step(steps)
+    # v0.5.46: prefer live signal next_concrete_step when present
+    live_step = (cur.get("next_concrete_step") or "").strip()
+    next_concrete_step = live_step if live_step else _first_autonomous_step(steps)
 
     action = {
         "at": _utc_now(),
