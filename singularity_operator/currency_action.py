@@ -4,6 +4,7 @@ Turns top_experiment / top_score into a recorded next action with provenance.
 Autonomous mode: records and publishes; does not require human outreach to run.
 Never marks won without real payment — payment cannot be fabricated by the loop.
 
+v0.5.47: priority_geometric_mean for multiplicative ranking insight.
 v0.5.46: Prefer live currency signal next_concrete_step over playbook default.
 v0.5.45: priority_mad (median absolute deviation) for robust dispersion of priority scores.
 v0.5.44: days_since_signal + next_concrete_step + stale-signal confidence decay.
@@ -245,6 +246,15 @@ def plan_next_action(
         med = priority_median
         abs_devs = [abs(s - med) for s in scores]
         priority_mad = round(statistics.median(abs_devs), 3) if abs_devs else 0.0
+    # v0.5.47: geometric mean for multiplicative insight into priority scores
+    priority_geometric_mean = 0.0
+    if n > 0:
+        positive = [s for s in scores if s > 0]
+        if positive:
+            log_sum = sum(math.log(s) for s in positive)
+            priority_geometric_mean = round(math.exp(log_sum / len(positive)), 3)
+        else:
+            priority_geometric_mean = 0.0
 
     steps = list(play.get("steps") or [])
     # v0.5.46: prefer live signal next_concrete_step when present
@@ -285,6 +295,7 @@ def plan_next_action(
         "priority_effective_n": priority_effective_n,
         "priority_top_rest_ratio": priority_top_rest_ratio,
         "priority_mad": priority_mad,
+        "priority_geometric_mean": priority_geometric_mean,
         "days_since_signal": days_since,
         "next_concrete_step": next_concrete_step,
         "steps": steps,
@@ -343,5 +354,6 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"top_share={action.get('priority_top_share', '?')} "
         f"eff_n={action.get('priority_effective_n', '?')} "
         f"top_rest={action.get('priority_top_rest_ratio', '?')} "
-        f"mad={action.get('priority_mad', '?')}"
+        f"mad={action.get('priority_mad', '?')} "
+        f"geo={action.get('priority_geometric_mean', '?')}"
     )
