@@ -4,6 +4,7 @@ Turns top_experiment / top_score into a recorded next action with provenance.
 Autonomous mode: records and publishes; does not require human outreach to run.
 Never marks won without real payment — payment cannot be fabricated by the loop.
 
+v0.5.48: priority_harmonic_mean for robust multiplicative ranking insight.
 v0.5.47: priority_geometric_mean for multiplicative ranking insight.
 v0.5.46: Prefer live currency signal next_concrete_step over playbook default.
 v0.5.45: priority_mad (median absolute deviation) for robust dispersion of priority scores.
@@ -255,6 +256,15 @@ def plan_next_action(
             priority_geometric_mean = round(math.exp(log_sum / len(positive)), 3)
         else:
             priority_geometric_mean = 0.0
+    # v0.5.48: harmonic mean for robust multiplicative ranking insight
+    priority_harmonic_mean = 0.0
+    if n > 0:
+        positive = [s for s in scores if s > 0]
+        if positive:
+            inv_sum = sum(1.0 / s for s in positive)
+            priority_harmonic_mean = round(len(positive) / inv_sum, 3) if inv_sum > 0 else 0.0
+        else:
+            priority_harmonic_mean = 0.0
 
     steps = list(play.get("steps") or [])
     # v0.5.46: prefer live signal next_concrete_step when present
@@ -296,6 +306,7 @@ def plan_next_action(
         "priority_top_rest_ratio": priority_top_rest_ratio,
         "priority_mad": priority_mad,
         "priority_geometric_mean": priority_geometric_mean,
+        "priority_harmonic_mean": priority_harmonic_mean,
         "days_since_signal": days_since,
         "next_concrete_step": next_concrete_step,
         "steps": steps,
@@ -355,5 +366,6 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"eff_n={action.get('priority_effective_n', '?')} "
         f"top_rest={action.get('priority_top_rest_ratio', '?')} "
         f"mad={action.get('priority_mad', '?')} "
-        f"geo={action.get('priority_geometric_mean', '?')}"
+        f"geo={action.get('priority_geometric_mean', '?')} "
+        f"harm={action.get('priority_harmonic_mean', '?')}"
     )

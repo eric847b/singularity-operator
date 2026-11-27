@@ -1,5 +1,6 @@
-"""Singularity Operator v0.5.47 - Ultimate self-improving AI system.
+"""Singularity Operator v0.5.48 - Ultimate self-improving AI system.
 
+v0.5.48: Currency action adds priority_harmonic_mean for robust multiplicative ranking insight (#43). Version parity restored.
 v0.5.47: Currency action adds priority_geometric_mean for multiplicative ranking insight (#43). Version parity restored.
 v0.5.46: Prefer live currency signal next_concrete_step over playbook default (#43). Version parity restored.
 v0.5.45: Currency action adds priority_mad (median absolute deviation) for robust dispersion of priority scores (#43). Version parity restored.
@@ -68,7 +69,7 @@ from .dynamics_core import (
     STATE_INACTIVE,
 )
 
-__version__ = "0.5.47"
+__version__ = "0.5.48"
 __all__ = [
     "EverythingDB",
     "SelfImprover",
