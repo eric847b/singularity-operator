@@ -4,6 +4,7 @@ Turns top_experiment / top_score into a recorded next action with provenance.
 Autonomous mode: records and publishes; does not require human outreach to run.
 Never marks won without real payment — payment cannot be fabricated by the loop.
 
+v0.5.49: priority_rms + priority_trimmed_mean for quadratic and robust central ranking insight.
 v0.5.48: priority_harmonic_mean for robust multiplicative ranking insight.
 v0.5.47: priority_geometric_mean for multiplicative ranking insight.
 v0.5.46: Prefer live currency signal next_concrete_step over playbook default.
@@ -265,6 +266,21 @@ def plan_next_action(
             priority_harmonic_mean = round(len(positive) / inv_sum, 3) if inv_sum > 0 else 0.0
         else:
             priority_harmonic_mean = 0.0
+    # v0.5.49: root mean square (quadratic mean) for ranking magnitude insight
+    priority_rms = 0.0
+    if n > 0:
+        sq_sum = sum(s * s for s in scores)
+        priority_rms = round(math.sqrt(sq_sum / n), 3) if n else 0.0
+    # v0.5.49: 10% trimmed mean for robust central tendency
+    priority_trimmed_mean = 0.0
+    if n >= 5:
+        k = max(1, n // 10)
+        trimmed = sorted_scores[k:-k] if k > 0 else sorted_scores
+        priority_trimmed_mean = round(sum(trimmed) / len(trimmed), 3) if trimmed else 0.0
+    elif n > 0:
+        priority_trimmed_mean = round(avg_priority_score, 3)
+    else:
+        priority_trimmed_mean = 0.0
 
     steps = list(play.get("steps") or [])
     # v0.5.46: prefer live signal next_concrete_step when present
@@ -307,6 +323,8 @@ def plan_next_action(
         "priority_mad": priority_mad,
         "priority_geometric_mean": priority_geometric_mean,
         "priority_harmonic_mean": priority_harmonic_mean,
+        "priority_rms": priority_rms,
+        "priority_trimmed_mean": priority_trimmed_mean,
         "days_since_signal": days_since,
         "next_concrete_step": next_concrete_step,
         "steps": steps,
@@ -367,5 +385,7 @@ def action_summary_line(action: Dict[str, Any]) -> str:
         f"top_rest={action.get('priority_top_rest_ratio', '?')} "
         f"mad={action.get('priority_mad', '?')} "
         f"geo={action.get('priority_geometric_mean', '?')} "
-        f"harm={action.get('priority_harmonic_mean', '?')}"
+        f"harm={action.get('priority_harmonic_mean', '?')} "
+        f"rms={action.get('priority_rms', '?')} "
+        f"trim={action.get('priority_trimmed_mean', '?')}"
     )
